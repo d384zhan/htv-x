@@ -1,2 +1,29 @@
 node_modules/
 .env
+# Environment variables - DO NOT COMMIT
+.env
+.env.local
+.env.*.local
+
+# API Keys and Secrets - DO NOT COMMIT
+getKey.py
+test_api.py
+getMarketData.py
+.env
+
+# Test Results
+api_test_results.txt
+market_data_*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
