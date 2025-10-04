@@ -18,12 +18,17 @@ export const DraggableAIChat: React.FC<DraggableAIChatProps> = ({
   messages = []
 }) => {
   const [isMinimized, setIsMinimized] = useState(true)
-  const [position, setPosition] = useState({ x: 20, y: window.innerHeight - 80 })
+  const [position, setPosition] = useState({ x: 20, y: 700 }) // Default value, will be updated on client
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [inputValue, setInputValue] = useState('')
   const chatRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Initialize position on client side
+  useEffect(() => {
+    setPosition({ x: 20, y: window.innerHeight - 80 })
+  }, [])
 
   // Load saved position from localStorage
   useEffect(() => {
