@@ -68,7 +68,7 @@ export class Carousel extends React.PureComponent<CarouselProps> {
     return cards.map((card, index) => (
       <CarouselCard
         key={`${keyPrefix}-${index}`}
-        content={card.content}
+        {...card}
       />
     ))
   }
@@ -78,13 +78,13 @@ export class Carousel extends React.PureComponent<CarouselProps> {
     const cards = this.getCards()
 
     return (
-      <div className={`relative mb-6 h-14 overflow-hidden ${className}`}>
+      <div className={`relative mb-4 h-20 overflow-hidden ${className}`}>
         {/* Fade overlays on edges for smooth appearance */}
         <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-[#181716] to-transparent z-10 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-[#181716] to-transparent z-10 pointer-events-none" />
 
         {/* Scrolling carousel - multiple duplicates ensure seamless loop on all screen sizes */}
-        <div className="flex gap-4 animate-carousel">
+        <div className="flex gap-[13px] animate-carousel">
           {/* Render 4 sets of cards to ensure smooth scrolling on ultra-wide screens */}
           {this.renderCardSet(cards, 'set1')}
           {this.renderCardSet(cards, 'set2')}
