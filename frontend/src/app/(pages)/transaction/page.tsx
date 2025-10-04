@@ -2,7 +2,7 @@
 
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { TransactionAnalysis } from "@/types"
 
@@ -14,7 +14,7 @@ const mockCoins = [
   { id: 'dot', ticker: 'DOT', name: 'Polkadot', currentPrice: 7.89 },
 ]
 
-export default function TransactionPage() {
+function TransactionPageContent() {
   const searchParams = useSearchParams()
   const [coinInput, setCoinInput] = useState<string>('')
   const [transactionType, setTransactionType] = useState<'buy' | 'sell'>('buy')
@@ -306,5 +306,17 @@ export default function TransactionPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function TransactionPage() {
+  return (
+    <Suspense fallback={
+      <div className="h-screen bg-[#181716] flex items-center justify-center">
+        <div className="text-white font-karla">Loading...</div>
+      </div>
+    }>
+      <TransactionPageContent />
+    </Suspense>
   )
 }
