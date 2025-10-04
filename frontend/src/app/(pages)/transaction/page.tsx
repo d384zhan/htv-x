@@ -3,6 +3,7 @@
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { TransactionAnalysis } from "@/types"
 
 const mockCoins = [
@@ -14,16 +15,42 @@ const mockCoins = [
 ]
 
 export default function TransactionPage() {
-  const [selectedCoin, setSelectedCoin] = useState(mockCoins[0])
+  const searchParams = useSearchParams()
+  const [coinInput, setCoinInput] = useState<string>('')
   const [transactionType, setTransactionType] = useState<'buy' | 'sell'>('buy')
   const [quantity, setQuantity] = useState<string>('')
   const [analysis, setAnalysis] = useState<TransactionAnalysis | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
 
-  const totalValue = quantity ? parseFloat(quantity) * selectedCoin.currentPrice : 0
+  // Populate form from URL parameters
+  useEffect(() => {
+    const action = searchParams.get('action')
+    const crypto = searchParams.get('crypto')
+    const amount = searchParams.get('amount')
+
+    if (action && (action === 'buy' || action === 'sell')) {
+      setTransactionType(action)
+    }
+    if (crypto) {
+      setCoinInput(crypto)
+    }
+    if (amount) {
+      setQuantity(amount)
+    }
+  }, [searchParams])
+
+  // Get current price for the coin input (case-insensitive match)
+  const getCurrentPrice = (ticker: string): number => {
+    if (!ticker) return 0
+    const coin = mockCoins.find(c => c.ticker.toLowerCase() === ticker.toLowerCase())
+    return coin ? coin.currentPrice : 0
+  }
+
+  const currentPrice = getCurrentPrice(coinInput)
+  const totalValue = quantity && currentPrice ? parseFloat(quantity) * currentPrice : 0
 
   const handleAnalyze = async () => {
-    if (!quantity || parseFloat(quantity) <= 0) return
+    if (!quantity || parseFloat(quantity) <= 0 || !coinInput.trim()) return
 
     setIsAnalyzing(true)
     
@@ -33,11 +60,11 @@ export default function TransactionPage() {
         recommendation: transactionType === 'buy' ? 'BUY' : 'SELL',
         confidence: 75,
         summary: transactionType === 'buy' 
-          ? `Based on current market trends, buying ${quantity} ${selectedCoin.ticker} shows moderate potential. The coin has demonstrated ${selectedCoin.ticker === 'BTC' ? 'strong' : 'steady'} support levels.`
-          : `Selling ${quantity} ${selectedCoin.ticker} at current price levels could be strategic if you're taking profits. Consider market volatility before proceeding.`,
+          ? `Based on current market trends, buying ${quantity} ${coinInput.toUpperCase()} shows moderate potential. The coin has demonstrated ${coinInput.toUpperCase() === 'BTC' ? 'strong' : 'steady'} support levels.`
+          : `Selling ${quantity} ${coinInput.toUpperCase()} at current price levels could be strategic if you're taking profits. Consider market volatility before proceeding.`,
         pros: [
           transactionType === 'buy' 
-            ? `${selectedCoin.ticker} has shown consistent growth patterns`
+            ? `${coinInput.toUpperCase()} has shown consistent growth patterns`
             : 'Taking profits at current price levels',
           `Transaction value of $${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} is within normal range`,
           'Market liquidity is strong'
@@ -49,7 +76,9 @@ export default function TransactionPage() {
             : 'Potential opportunity cost if price continues upward',
           'Global economic factors could impact crypto markets'
         ],
-        marketContext: `Current ${selectedCoin.ticker} price is $${selectedCoin.currentPrice.toLocaleString()}. ${transactionType === 'buy' ? 'Market conditions are favorable for accumulation' : 'Consider timing based on recent market movements'}.`,
+        marketContext: currentPrice > 0 
+          ? `Current ${coinInput.toUpperCase()} price is $${currentPrice.toLocaleString()}. ${transactionType === 'buy' ? 'Market conditions are favorable for accumulation' : 'Consider timing based on recent market movements'}.`
+          : `Unable to find current price data for ${coinInput.toUpperCase()}. Please verify the ticker symbol.`,
         riskLevel: 'MEDIUM'
       }
       
@@ -61,7 +90,7 @@ export default function TransactionPage() {
   // Reset analysis when form changes
   useEffect(() => {
     setAnalysis(null)
-  }, [selectedCoin, transactionType, quantity])
+  }, [coinInput, transactionType, quantity])
 
   return (
     <div className="h-screen bg-[#181716] overflow-hidden flex flex-col" style={{ maxHeight: '100vh' }}>
@@ -84,20 +113,16 @@ export default function TransactionPage() {
           <div className="bg-gradient-to-b from-[#2e2b2a] to-[#252322] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.5),0_4px_16px_rgba(0,0,0,0.4),inset_0_2px_0_rgba(255,255,255,0.1)] border border-[#4a4542] overflow-y-auto">
             <h2 className="text-white text-xl font-bold mb-6 font-karla">Transaction Details</h2>
 
-            {/* Coin Selection */}
+            {/* Coin Input */}
             <div className="mb-6">
-              <label className="text-gray-400 text-sm font-karla mb-2 block">Select Coin</label>
-              <select
-                value={selectedCoin.id}
-                onChange={(e) => setSelectedCoin(mockCoins.find(c => c.id === e.target.value)!)}
-                className="w-full bg-gradient-to-b from-[#1f1d1d] to-[#181716] text-white font-karla text-base px-4 py-3 rounded-2xl border border-[#3a3736] shadow-[inset_0_2px_8px_rgba(0,0,0,0.3)] focus:outline-none focus:border-[#4a4542] transition-colors"
-              >
-                {mockCoins.map(coin => (
-                  <option key={coin.id} value={coin.id}>
-                    {coin.ticker} - {coin.name}
-                  </option>
-                ))}
-              </select>
+              <label className="text-gray-400 text-sm font-karla mb-2 block">Coin Ticker</label>
+              <input
+                type="text"
+                value={coinInput}
+                onChange={(e) => setCoinInput(e.target.value.toUpperCase())}
+                placeholder="e.g., BTC, ETH, SOL"
+                className="w-full bg-gradient-to-b from-[#1f1d1d] to-[#181716] text-white font-karla text-base px-4 py-3 rounded-2xl border border-[#3a3736] shadow-[inset_0_2px_8px_rgba(0,0,0,0.3)] focus:outline-none focus:border-[#4a4542] transition-colors placeholder:text-gray-600"
+              />
             </div>
 
             {/* Buy/Sell Toggle */}
@@ -144,8 +169,10 @@ export default function TransactionPage() {
             {/* Price Info */}
             <div className="mb-6 p-4 bg-gradient-to-b from-[#1f1d1d] to-[#181716] rounded-2xl border border-[#3a3736]">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-400 text-sm font-karla">Price per {selectedCoin.ticker}</span>
-                <span className="text-white font-karla font-medium">${selectedCoin.currentPrice.toLocaleString()}</span>
+                <span className="text-gray-400 text-sm font-karla">Price per {coinInput || 'coin'}</span>
+                <span className="text-white font-karla font-medium">
+                  {currentPrice > 0 ? `$${currentPrice.toLocaleString()}` : 'N/A'}
+                </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-400 text-sm font-karla">Total Value</span>
@@ -158,7 +185,7 @@ export default function TransactionPage() {
             {/* Analyze Button */}
             <button
               onClick={handleAnalyze}
-              disabled={!quantity || parseFloat(quantity) <= 0 || isAnalyzing}
+              disabled={!quantity || parseFloat(quantity) <= 0 || !coinInput.trim() || isAnalyzing}
               className="w-full bg-gradient-to-b from-[#3a5a7a] to-[#2a4a6a] hover:from-[#4a6a8a] hover:to-[#3a5a7a] disabled:from-[#2a2727] disabled:to-[#1f1d1d] text-white font-karla font-bold py-3 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.1)] border border-[#4a6a8a] disabled:border-[#3a3736] disabled:text-gray-600 transition-all active:scale-95 disabled:active:scale-100">
               {isAnalyzing ? 'Analyzing...' : 'Get AI Analysis'}
             </button>
