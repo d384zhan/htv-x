@@ -5,9 +5,18 @@ import { Carousel } from "@/components/carousel"
 import { useMemo, useState } from "react"
 import Link from "next/link"
 
+type Plan = {
+  action: string
+  crypto: string
+  amount: number
+  reason?: string
+}
+
 type Message = {
   role: "user" | "bot"
   content: string
+  isPlan?: boolean
+  plans?: Plan[]
 }
 
 export default function HomePage() {
@@ -24,46 +33,51 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-const handleSend = async () => {
-  if (!input.trim()) return
-  setLoading(true)
-  setError(null)
+  const handleSend = async () => {
+    if (!input.trim()) return
+    setLoading(true)
+    setError(null)
 
-  // Add user message
-  setMessages(prev => [...prev, { role: "user", content: input }])
-  const userInput = input
-  setInput("")
+    // Add user message
+    setMessages(prev => [...prev, { role: "user", content: input }])
+    const userInput = input
+    setInput("")
 
-  try {
-    console.log("Sending request to backend...") // Debug log
-    const res = await fetch("http://localhost:4000/api/gemini", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: userInput }),
-    })
-    
-    console.log("Response status:", res.status) // Debug log
-    
-    if (!res.ok) {
-      throw new Error(`HTTP error! status: ${res.status}`)
+    try {
+      console.log("Sending request to backend...")
+      const res = await fetch("http://localhost:4000/api/gemini", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: userInput }),
+      })
+      
+      console.log("Response status:", res.status)
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`)
+      }
+      
+      const data = await res.json()
+      console.log("Response data:", data)
+      
+      if (data.research) {
+        setMessages(prev => [...prev, { 
+          role: "bot", 
+          content: data.research,
+          isPlan: data.is_plan || false,
+          plans: data.plans || []
+        }])
+      } else if (data.error) {
+        setMessages(prev => [...prev, { role: "bot", content: data.error }])
+      } else {
+        setMessages(prev => [...prev, { role: "bot", content: "No response received." }])
+      }
+    } catch (err) {
+      console.error("Fetch error:", err)
+      setMessages(prev => [...prev, { role: "bot", content: `Error: ${err instanceof Error ? err.message : "Failed to fetch research."}` }])
     }
-    
-    const data = await res.json()
-    console.log("Response data:", data) // Debug log
-    
-    if (data.research) {
-      setMessages(prev => [...prev, { role: "bot", content: data.research }])
-    } else if (data.error) {
-      setMessages(prev => [...prev, { role: "bot", content: data.error }])
-    } else {
-      setMessages(prev => [...prev, { role: "bot", content: "No response received." }])
-    }
-  } catch (err) {
-    console.error("Fetch error:", err) // Debug log
-    setMessages(prev => [...prev, { role: "bot", content: `Error: ${err instanceof Error ? err.message : "Failed to fetch research."}` }])
+    setLoading(false)
   }
-  setLoading(false)
-}
 
   // Allow pressing Enter to send
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -88,14 +102,46 @@ const handleSend = async () => {
                 key={idx}
                 className={`mb-2 flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                <div
-                  className={`px-4 py-2 rounded-xl max-w-[70%] ${
-                    msg.role === "user"
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-700 text-gray-100"
-                  }`}
-                >
-                  {msg.content}
+                <div className="flex flex-col max-w-[80%]">
+                  <div
+                    className={`px-4 py-2 rounded-xl ${
+                      msg.role === "user"
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-700 text-gray-100"
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+                  
+                  {/* Show transaction buttons if it's a plan with multiple options */}
+                  {msg.isPlan && msg.plans && msg.plans.length > 0 && (
+                    <div className="mt-2 space-y-2">
+                      {msg.plans.map((plan, planIdx) => (
+                        <div key={planIdx} className="flex flex-col gap-1">
+                          <Link 
+                            href={`/transaction?action=${plan.action}&crypto=${plan.crypto}&amount=${plan.amount}`}
+                            className="w-full"
+                          >
+                            <button className="w-full bg-gray-600 hover:bg-gray-500 text-white px-4 py-3 rounded-lg text-sm font-medium transition-colors text-left">
+                              <div className="flex items-center justify-between">
+                                <div className="flex flex-col">
+                                  <span className="font-semibold">
+                                    {plan.action.charAt(0).toUpperCase() + plan.action.slice(1)} {plan.amount} {plan.crypto}
+                                  </span>
+                                  {plan.reason && (
+                                    <span className="text-xs text-blue-200 mt-1">
+                                      {plan.reason}
+                                    </span>
+                                  )}
+                                </div>
+                                <ArrowRight className="w-4 h-4 flex-shrink-0 ml-2" />
+                              </div>
+                            </button>
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
