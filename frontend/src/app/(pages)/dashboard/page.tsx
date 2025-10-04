@@ -92,14 +92,6 @@ const mockCoinDetails: Record<string, CoinDetails> = {
 
 export default function DashboardPage() {
   const [selectedCoinId, setSelectedCoinId] = useState<string | null>(null)
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: 'Hello! I\'m your AI trading assistant. How can I help you today?',
-      timestamp: Date.now()
-    }
-  ])
 
   const totalValue = useMemo(() => 
     mockHoldings.reduce((sum, h) => sum + h.totalValue, 0),
@@ -108,25 +100,6 @@ export default function DashboardPage() {
 
   const selectedHolding = mockHoldings.find(h => h.coinId === selectedCoinId) || null
   const selectedCoinDetails = selectedCoinId ? mockCoinDetails[selectedCoinId] : null
-
-  const handleSendMessage = (message: string) => {
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: message,
-      timestamp: Date.now()
-    }
-    
-    // Simulate AI response
-    const aiMessage: ChatMessage = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant',
-      content: 'This is a simulated response. Connect to your AI backend for real responses.',
-      timestamp: Date.now() + 1000
-    }
-
-    setChatMessages(prev => [...prev, userMessage, aiMessage])
-  }
 
   return (
     <div className="h-screen bg-[#181716] overflow-hidden flex flex-col" style={{ maxHeight: '100vh' }}>
@@ -169,10 +142,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Draggable AI Chat */}
-      <DraggableAIChat 
-        messages={chatMessages}
-        onSendMessage={handleSendMessage}
-      />
+      <DraggableAIChat />
     </div>
   )
 }
