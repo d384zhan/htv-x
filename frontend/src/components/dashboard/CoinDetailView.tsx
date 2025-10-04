@@ -21,14 +21,28 @@ export const CoinDetailView: React.FC<CoinDetailViewProps> = ({
 }) => {
   if (!coinDetails || !holding) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <p className="text-gray-400 font-karla text-2xl mb-2">
-            No coin selected
-          </p>
-          <p className="text-gray-500 font-karla text-lg">
-            Select a coin from your portfolio to view details
-          </p>
+      <div className="h-full flex flex-col">
+        {/* Show New Transaction button even when no coin selected */}
+        <div className="mb-8 flex justify-end">
+          <Link href="/transaction">
+            <button className="bg-gradient-to-b from-[#e8e8e8] to-[#c9c9c9] hover:from-[#f0f0f0] hover:to-[#d9d9d9] transition-all rounded-full px-5 py-2.5 flex items-center gap-2 shadow-[0_4px_12px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.5)] border border-[#ffffff40] active:scale-95">
+              <Plus className="w-4 h-4 text-[#2a2727]" />
+              <span className="text-[#2a2727] font-karla font-semibold text-sm">
+                New Transaction
+              </span>
+            </button>
+          </Link>
+        </div>
+        
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <p className="text-gray-400 font-karla text-2xl mb-2">
+              No coin selected
+            </p>
+            <p className="text-gray-500 font-karla text-lg">
+              Select a coin from your portfolio to view details
+            </p>
+          </div>
         </div>
       </div>
     )
