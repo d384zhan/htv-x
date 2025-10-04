@@ -3,7 +3,16 @@
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
-import { TransactionAnalysis } from "@/types"
+
+interface TransactionAnalysis {
+  recommendation: 'BUY' | 'SELL' | 'HOLD' | 'CAUTION'
+  confidence: number
+  summary: string
+  pros: string[]
+  cons: string[]
+  marketContext: string
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH'
+}
 
 const mockCoins = [
   { id: 'btc', ticker: 'BTC', name: 'Bitcoin', currentPrice: 67234 },
@@ -27,35 +36,61 @@ export default function TransactionPage() {
 
     setIsAnalyzing(true)
     
-    // Simulate AI analysis - replace with actual API call
-    setTimeout(() => {
-      const mockAnalysis: TransactionAnalysis = {
-        recommendation: transactionType === 'buy' ? 'BUY' : 'SELL',
-        confidence: 75,
-        summary: transactionType === 'buy' 
-          ? `Based on current market trends, buying ${quantity} ${selectedCoin.ticker} shows moderate potential. The coin has demonstrated ${selectedCoin.ticker === 'BTC' ? 'strong' : 'steady'} support levels.`
-          : `Selling ${quantity} ${selectedCoin.ticker} at current price levels could be strategic if you're taking profits. Consider market volatility before proceeding.`,
-        pros: [
-          transactionType === 'buy' 
-            ? `${selectedCoin.ticker} has shown consistent growth patterns`
-            : 'Taking profits at current price levels',
-          `Transaction value of $${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} is within normal range`,
-          'Market liquidity is strong'
-        ],
-        cons: [
-          'Market volatility remains elevated',
-          transactionType === 'buy' 
-            ? 'Price may experience short-term corrections'
-            : 'Potential opportunity cost if price continues upward',
-          'Global economic factors could impact crypto markets'
-        ],
-        marketContext: `Current ${selectedCoin.ticker} price is $${selectedCoin.currentPrice.toLocaleString()}. ${transactionType === 'buy' ? 'Market conditions are favorable for accumulation' : 'Consider timing based on recent market movements'}.`,
-        riskLevel: 'MEDIUM'
+    try {
+      console.log("Sending request:", {
+        crypto: selectedCoin.ticker,
+        action: transactionType,
+        amount: parseFloat(quantity)
+      })
+
+      const res = await fetch("http://localhost:4000/api/gemini-coin-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          crypto: selectedCoin.ticker,
+          action: transactionType,
+          amount: parseFloat(quantity)
+        }),
+      })
+
+      console.log("Response status:", res.status)
+
+      if (!res.ok) {
+        const errorText = await res.text()
+        console.error("Error response:", errorText)
+        throw new Error(`HTTP error! status: ${res.status}`)
       }
+
+      const data = await res.json()
+      console.log("Full API response:", data)
       
-      setAnalysis(mockAnalysis)
-      setIsAnalyzing(false)
-    }, 1500)
+      if (data.success && data.analysis) {
+        const apiAnalysis = data.analysis
+        console.log("API Analysis:", apiAnalysis)
+        
+        // Map the API response to our component's expected format
+        const mappedAnalysis: TransactionAnalysis = {
+          recommendation: apiAnalysis.recommendation.decision.toUpperCase().replace('STRONG_', '').replace('_', '') as 'BUY' | 'SELL' | 'HOLD' | 'CAUTION',
+          confidence: apiAnalysis.recommendation.confidence,
+          summary: apiAnalysis.summary,
+          pros: apiAnalysis.pros,
+          cons: apiAnalysis.cons,
+          marketContext: `${apiAnalysis.market_context.current_trend} trend with ${apiAnalysis.market_context.volatility} volatility. ${apiAnalysis.market_context.market_sentiment}`,
+          riskLevel: apiAnalysis.recommendation.risk_level.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH'
+        }
+        
+        console.log("Mapped analysis:", mappedAnalysis)
+        setAnalysis(mappedAnalysis)
+      } else {
+        console.error("Invalid response structure:", data)
+        throw new Error("Invalid response structure")
+      }
+    } catch (err) {
+      console.error("Failed to analyze coin:", err)
+      alert(`Failed to fetch analysis: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
+    
+    setIsAnalyzing(false)
   }
 
   // Reset analysis when form changes
