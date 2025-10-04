@@ -24,33 +24,46 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const handleSend = async () => {
-    if (!input.trim()) return
-    setLoading(true)
-    setError(null)
+const handleSend = async () => {
+  if (!input.trim()) return
+  setLoading(true)
+  setError(null)
 
-    // Add user message
-    setMessages(prev => [...prev, { role: "user", content: input }])
-    const userInput = input
-    setInput("")
+  // Add user message
+  setMessages(prev => [...prev, { role: "user", content: input }])
+  const userInput = input
+  setInput("")
 
-    try {
-      const res = await fetch("http://localhost:4000/api/gemini", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: userInput }),
-      })
-      const data = await res.json()
-      if (data.research) {
-        setMessages(prev => [...prev, { role: "bot", content: data.research }])
-      } else {
-        setMessages(prev => [...prev, { role: "bot", content: data.error || "No research found." }])
-      }
-    } catch (err) {
-      setMessages(prev => [...prev, { role: "bot", content: "Failed to fetch research." }])
+  try {
+    console.log("Sending request to backend...") // Debug log
+    const res = await fetch("http://localhost:4000/api/gemini", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: userInput }),
+    })
+    
+    console.log("Response status:", res.status) // Debug log
+    
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`)
     }
-    setLoading(false)
+    
+    const data = await res.json()
+    console.log("Response data:", data) // Debug log
+    
+    if (data.research) {
+      setMessages(prev => [...prev, { role: "bot", content: data.research }])
+    } else if (data.error) {
+      setMessages(prev => [...prev, { role: "bot", content: data.error }])
+    } else {
+      setMessages(prev => [...prev, { role: "bot", content: "No response received." }])
+    }
+  } catch (err) {
+    console.error("Fetch error:", err) // Debug log
+    setMessages(prev => [...prev, { role: "bot", content: `Error: ${err instanceof Error ? err.message : "Failed to fetch research."}` }])
   }
+  setLoading(false)
+}
 
   // Allow pressing Enter to send
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
