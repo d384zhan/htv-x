@@ -33,6 +33,25 @@ export const DraggableAIChat: React.FC = () => {
   const chatRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Load messages from sessionStorage on mount
+  useEffect(() => {
+    const savedMessages = sessionStorage.getItem('dashboard-chat-messages')
+    if (savedMessages) {
+      try {
+        setMessages(JSON.parse(savedMessages))
+      } catch (e) {
+        console.error('Failed to parse saved messages:', e)
+      }
+    }
+  }, [])
+
+  // Save messages to sessionStorage whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      sessionStorage.setItem('dashboard-chat-messages', JSON.stringify(messages))
+    }
+  }, [messages])
+
   // Initialize position on client side - top right corner
   useEffect(() => {
     const getResponsivePadding = () => {
