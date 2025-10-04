@@ -2,44 +2,118 @@
 
 import { ChevronUp, ArrowRight } from "lucide-react"
 import { Carousel } from "@/components/carousel"
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
 
+type Message = {
+  role: "user" | "bot"
+  content: string
+}
+
 export default function HomePage() {
-  // Memoize crypto cards array with ticker, price, and percent change
   const carouselCards = useMemo(() => [
     { ticker: "BTC", price: "$67,234", percentChange: 2.34 },
     { ticker: "ETH", price: "$3,456", percentChange: -1.23 },
     { ticker: "SOL", price: "$142", percentChange: 5.67 },
     { ticker: "ADA", price: "$0.58", percentChange: 3.45 },
     { ticker: "DOT", price: "$6.89", percentChange: -0.89 },
-  ], []) // Empty dependency array - cards never change
+  ], [])
+
+  const [input, setInput] = useState("")
+  const [messages, setMessages] = useState<Message[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSend = async () => {
+    if (!input.trim()) return
+    setLoading(true)
+    setError(null)
+
+    // Add user message
+    setMessages(prev => [...prev, { role: "user", content: input }])
+    const userInput = input
+    setInput("")
+
+    try {
+      const res = await fetch("http://localhost:4000/api/gemini", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: userInput }),
+      })
+      const data = await res.json()
+      if (data.research) {
+        setMessages(prev => [...prev, { role: "bot", content: data.research }])
+      } else {
+        setMessages(prev => [...prev, { role: "bot", content: data.error || "No research found." }])
+      }
+    } catch (err) {
+      setMessages(prev => [...prev, { role: "bot", content: "Failed to fetch research." }])
+    }
+    setLoading(false)
+  }
+
+  // Allow pressing Enter to send
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !loading) {
+      handleSend()
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#181716] flex items-center justify-center py-12">
       <div className="w-full px-[168px] max-lg:px-12 max-md:px-6 flex flex-col gap-4">
-        {/* Title */}
         <h1 className="text-white text-6xl md:text-7xl lg:text-8xl font-bold text-center">placeholder title.</h1>
-
-        {/* Carousel Component - Displays crypto prices */}
         <Carousel cards={carouselCards} />
 
         <div className="bg-gradient-to-b from-[#2e2b2a] to-[#252322] rounded-3xl p-8 min-h-[600px] flex flex-col shadow-[0_8px_32px_rgba(0,0,0,0.5),0_4px_16px_rgba(0,0,0,0.4),inset_0_2px_0_rgba(255,255,255,0.1)] border border-[#4a4542]">
-          <div className="flex-1" />
+          <div className="flex-1 overflow-y-auto mb-4 max-h-[350px]">
+            {messages.length === 0 && (
+              <div className="text-gray-400 text-center">Start chatting about cryptocurrencies!</div>
+            )}
+            {messages.map((msg, idx) => (
+              <div
+                key={idx}
+                className={`mb-2 flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`px-4 py-2 rounded-xl max-w-[70%] ${
+                    msg.role === "user"
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-700 text-gray-100"
+                  }`}
+                >
+                  {msg.content}
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div className="mb-2 flex justify-start">
+                <div className="px-4 py-2 rounded-xl bg-gray-700 text-gray-100">Thinking...</div>
+              </div>
+            )}
+          </div>
 
           <div className="relative">
             <input
               type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Type your message..."
               className="w-full bg-[#1a1817] rounded-2xl px-6 py-6 pr-20 min-h-[80px] text-white placeholder:text-gray-500 font-karla text-lg shadow-[inset_0_2px_8px_rgba(0,0,0,0.5),inset_0_1px_4px_rgba(0,0,0,0.3)] border border-[#0f0e0d] focus:outline-none focus:border-[#2a2827] transition-colors"
+              disabled={loading}
             />
-            <button className="absolute bottom-4 right-4 bg-gradient-to-b from-[#e8e8e8] to-[#c9c9c9] hover:from-[#f0f0f0] hover:to-[#d9d9d9] transition-all rounded-xl w-12 h-12 flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.5)] border border-[#ffffff40] active:scale-95">
+            <button
+              className="absolute bottom-4 right-4 bg-gradient-to-b from-[#e8e8e8] to-[#c9c9c9] hover:from-[#f0f0f0] hover:to-[#d9d9d9] transition-all rounded-xl w-12 h-12 flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.5)] border border-[#ffffff40] active:scale-95"
+              onClick={handleSend}
+              disabled={loading || !input.trim()}
+              aria-label="Send"
+            >
               <ChevronUp className="w-5 h-5 text-[#181716]" />
             </button>
           </div>
         </div>
 
-        {/* Dashboard Button */}
         <Link href="/dashboard" className="mx-auto">
           <button className="bg-gradient-to-b from-[#2a2727] to-[#1f1d1d] hover:from-[#323030] hover:to-[#252322] transition-all rounded-full px-8 py-4 flex items-center gap-3 shadow-[0_4px_12px_rgba(0,0,0,0.4),0_2px_6px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.05)] border border-[#3a3736] active:scale-95">
             <span className="text-white font-karla font-medium text-base">Go to Dashboard</span>
