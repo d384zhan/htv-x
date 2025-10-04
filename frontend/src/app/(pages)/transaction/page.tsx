@@ -64,8 +64,8 @@ export default function TransactionPage() {
   }, [selectedCoin, transactionType, quantity])
 
   return (
-    <div className="min-h-screen bg-[#181716] py-8">
-      <div className="w-full px-[168px] max-lg:px-12 max-md:px-6">
+    <div className="h-screen bg-[#181716] overflow-hidden flex flex-col" style={{ maxHeight: '100vh' }}>
+      <div className="w-full px-8 sm:px-16 md:px-24 lg:px-32 py-6 flex-shrink-0" style={{ maxWidth: '1920px', marginLeft: 'auto', marginRight: 'auto' }}>
         {/* Back Button */}
         <Link href="/dashboard" className="inline-block mb-6">
           <button className="bg-gradient-to-b from-[#2a2727] to-[#1f1d1d] hover:from-[#323030] hover:to-[#252322] transition-all rounded-full px-6 py-3 flex items-center gap-2 shadow-[0_4px_12px_rgba(0,0,0,0.4),0_2px_6px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.05)] border border-[#3a3736] active:scale-95">
@@ -75,12 +75,14 @@ export default function TransactionPage() {
         </Link>
 
         {/* Page Title */}
-        <h1 className="text-white text-4xl font-bold text-center mb-8 font-karla">New Transaction</h1>
+        <h1 className="text-white text-3xl font-bold text-center mb-6 font-karla">New Transaction</h1>
+      </div>
 
-        <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="flex-1 overflow-hidden px-8 sm:px-16 md:px-24 lg:px-32 pb-16 w-full" style={{ maxWidth: '1920px', marginLeft: 'auto', marginRight: 'auto' }}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full" style={{ maxWidth: '1536px', marginLeft: 'auto', marginRight: 'auto' }}>
           {/* Transaction Form */}
-          <div className="bg-gradient-to-b from-[#2e2b2a] to-[#252322] rounded-3xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.5),0_4px_16px_rgba(0,0,0,0.4),inset_0_2px_0_rgba(255,255,255,0.1)] border border-[#4a4542]">
-            <h2 className="text-white text-2xl font-bold mb-6 font-karla">Transaction Details</h2>
+          <div className="bg-gradient-to-b from-[#2e2b2a] to-[#252322] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.5),0_4px_16px_rgba(0,0,0,0.4),inset_0_2px_0_rgba(255,255,255,0.1)] border border-[#4a4542] overflow-y-auto">
+            <h2 className="text-white text-xl font-bold mb-6 font-karla">Transaction Details</h2>
 
             {/* Coin Selection */}
             <div className="mb-6">
@@ -88,7 +90,7 @@ export default function TransactionPage() {
               <select
                 value={selectedCoin.id}
                 onChange={(e) => setSelectedCoin(mockCoins.find(c => c.id === e.target.value)!)}
-                className="w-full bg-gradient-to-b from-[#1f1d1d] to-[#181716] text-white font-karla text-lg px-4 py-3 rounded-2xl border border-[#3a3736] shadow-[inset_0_2px_8px_rgba(0,0,0,0.3)] focus:outline-none focus:border-[#4a4542] transition-colors"
+                className="w-full bg-gradient-to-b from-[#1f1d1d] to-[#181716] text-white font-karla text-base px-4 py-3 rounded-2xl border border-[#3a3736] shadow-[inset_0_2px_8px_rgba(0,0,0,0.3)] focus:outline-none focus:border-[#4a4542] transition-colors"
               >
                 {mockCoins.map(coin => (
                   <option key={coin.id} value={coin.id}>
@@ -135,7 +137,7 @@ export default function TransactionPage() {
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
                 placeholder="0.00"
-                className="w-full bg-gradient-to-b from-[#1f1d1d] to-[#181716] text-white font-karla text-lg px-4 py-3 rounded-2xl border border-[#3a3736] shadow-[inset_0_2px_8px_rgba(0,0,0,0.3)] focus:outline-none focus:border-[#4a4542] transition-colors placeholder:text-gray-600"
+                className="w-full bg-gradient-to-b from-[#1f1d1d] to-[#181716] text-white font-karla text-base px-4 py-3 rounded-2xl border border-[#3a3736] shadow-[inset_0_2px_8px_rgba(0,0,0,0.3)] focus:outline-none focus:border-[#4a4542] transition-colors placeholder:text-gray-600"
               />
             </div>
 
@@ -147,7 +149,7 @@ export default function TransactionPage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-400 text-sm font-karla">Total Value</span>
-                <span className="text-white font-karla font-bold text-lg">
+                <span className="text-white font-karla font-bold text-base">
                   ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
@@ -157,31 +159,30 @@ export default function TransactionPage() {
             <button
               onClick={handleAnalyze}
               disabled={!quantity || parseFloat(quantity) <= 0 || isAnalyzing}
-              className="w-full bg-gradient-to-b from-[#3a5a7a] to-[#2a4a6a] hover:from-[#4a6a8a] hover:to-[#3a5a7a] disabled:from-[#2a2727] disabled:to-[#1f1d1d] text-white font-karla font-bold py-4 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.1)] border border-[#4a6a8a] disabled:border-[#3a3736] disabled:text-gray-600 transition-all active:scale-95 disabled:active:scale-100"
-            >
+              className="w-full bg-gradient-to-b from-[#3a5a7a] to-[#2a4a6a] hover:from-[#4a6a8a] hover:to-[#3a5a7a] disabled:from-[#2a2727] disabled:to-[#1f1d1d] text-white font-karla font-bold py-3 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.1)] border border-[#4a6a8a] disabled:border-[#3a3736] disabled:text-gray-600 transition-all active:scale-95 disabled:active:scale-100">
               {isAnalyzing ? 'Analyzing...' : 'Get AI Analysis'}
             </button>
           </div>
 
           {/* AI Analysis */}
-          <div className="bg-gradient-to-b from-[#2e2b2a] to-[#252322] rounded-3xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.5),0_4px_16px_rgba(0,0,0,0.4),inset_0_2px_0_rgba(255,255,255,0.1)] border border-[#4a4542]">
-            <h2 className="text-white text-2xl font-bold mb-6 font-karla">AI Analysis</h2>
+          <div className="bg-gradient-to-b from-[#2e2b2a] to-[#252322] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.5),0_4px_16px_rgba(0,0,0,0.4),inset_0_2px_0_rgba(255,255,255,0.1)] border border-[#4a4542] overflow-hidden flex flex-col">
+            <h2 className="text-white text-xl font-bold mb-6 font-karla flex-shrink-0">AI Analysis</h2>
 
             {!analysis && !isAnalyzing && (
-              <div className="flex items-center justify-center h-[calc(100%-3rem)] text-gray-500 font-karla text-center">
+              <div className="flex-1 flex items-center justify-center text-gray-500 font-karla text-center">
                 Fill out the transaction details and click "Get AI Analysis" to receive insights
               </div>
             )}
 
             {isAnalyzing && (
-              <div className="flex flex-col items-center justify-center h-[calc(100%-3rem)] gap-4">
+              <div className="flex-1 flex flex-col items-center justify-center gap-4">
                 <div className="w-12 h-12 border-4 border-[#3a5a7a] border-t-transparent rounded-full animate-spin"></div>
                 <p className="text-gray-400 font-karla">Analyzing transaction...</p>
               </div>
             )}
 
             {analysis && (
-              <div className="space-y-6">
+              <div className="flex-1 overflow-y-auto space-y-6 pr-2">
                 {/* Recommendation Badge */}
                 <div className="flex items-center gap-3">
                   <span className="text-gray-400 font-karla text-sm">Recommendation:</span>
@@ -214,7 +215,7 @@ export default function TransactionPage() {
 
                 {/* Summary */}
                 <div>
-                  <h3 className="text-white font-karla font-medium mb-2">Summary</h3>
+                  <h3 className="text-white font-karla font-medium mb-3">Summary</h3>
                   <p className="text-gray-300 font-karla text-sm leading-relaxed">
                     {analysis.summary}
                   </p>
@@ -222,7 +223,7 @@ export default function TransactionPage() {
 
                 {/* Market Context */}
                 <div>
-                  <h3 className="text-white font-karla font-medium mb-2">Market Context</h3>
+                  <h3 className="text-white font-karla font-medium mb-3">Market Context</h3>
                   <p className="text-gray-300 font-karla text-sm leading-relaxed">
                     {analysis.marketContext}
                   </p>
@@ -230,7 +231,7 @@ export default function TransactionPage() {
 
                 {/* Pros */}
                 <div>
-                  <h3 className="text-white font-karla font-medium mb-2">Pros</h3>
+                  <h3 className="text-white font-karla font-medium mb-3">Pros</h3>
                   <ul className="space-y-2">
                     {analysis.pros.map((pro: string, index: number) => (
                       <li key={index} className="text-gray-300 font-karla text-sm flex items-start gap-2">
@@ -243,7 +244,7 @@ export default function TransactionPage() {
 
                 {/* Cons */}
                 <div>
-                  <h3 className="text-white font-karla font-medium mb-2">Cons</h3>
+                  <h3 className="text-white font-karla font-medium mb-3">Cons</h3>
                   <ul className="space-y-2">
                     {analysis.cons.map((con: string, index: number) => (
                       <li key={index} className="text-gray-300 font-karla text-sm flex items-start gap-2">
@@ -269,7 +270,7 @@ export default function TransactionPage() {
                 </div>
 
                 {/* Execute Button */}
-                <button className="w-full bg-gradient-to-b from-[#2a5a2a] to-[#1f4a1f] hover:from-[#3a6a3a] hover:to-[#2a5a2a] text-white font-karla font-bold py-4 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.1)] border border-[#3a6a3a] transition-all active:scale-95 mt-2">
+                <button className="w-full bg-gradient-to-b from-[#2a5a2a] to-[#1f4a1f] hover:from-[#3a6a3a] hover:to-[#2a5a2a] text-white font-karla font-bold py-3 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.1)] border border-[#3a6a3a] transition-all active:scale-95 mt-2">
                   Execute {transactionType === 'buy' ? 'Purchase' : 'Sale'}
                 </button>
               </div>

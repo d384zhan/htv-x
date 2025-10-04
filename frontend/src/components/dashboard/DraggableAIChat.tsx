@@ -25,30 +25,24 @@ export const DraggableAIChat: React.FC<DraggableAIChatProps> = ({
   const chatRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Initialize position on client side
+  // Initialize position on client side - top right corner (no localStorage)
   useEffect(() => {
-    setPosition({ x: 20, y: window.innerHeight - 80 })
-  }, [])
-
-  // Load saved position from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('ai-chat-state')
-    if (saved) {
-      try {
-        const { isMinimized: savedMinimized, position: savedPosition } = JSON.parse(saved)
-        setIsMinimized(savedMinimized ?? true)
-        if (savedPosition) {
-          setPosition(savedPosition)
-        }
-      } catch (e) {
-        console.error('Failed to load chat state:', e)
-      }
+    const getResponsivePadding = () => {
+      const width = window.innerWidth
+      if (width >= 1024) return 128 // lg:px-32
+      if (width >= 768) return 96   // md:px-24
+      if (width >= 640) return 64   // sm:px-16
+      return 32                      // px-8
     }
+    const padding = getResponsivePadding()
+    // Position at right edge of content area (same as dashboard container)
+    setPosition({ x: window.innerWidth - 200 - padding, y: 32 })
   }, [])
 
-  // Save position to localStorage
+  // No localStorage - removed for consistency
+  // Save position to localStorage - REMOVED
   useEffect(() => {
-    localStorage.setItem('ai-chat-state', JSON.stringify({ isMinimized, position }))
+    // Removed localStorage saving for consistency across sessions
   }, [isMinimized, position])
 
   // Auto-scroll to bottom when new messages arrive
@@ -165,7 +159,7 @@ export const DraggableAIChat: React.FC<DraggableAIChatProps> = ({
           </div>
 
           {/* Messages */}
-          <div className="h-[300px] overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-[#3a3736] scrollbar-track-transparent">
+          <div className="overflow-y-auto p-3 space-y-3 scrollbar-thin scrollbar-thumb-[#3a3736] scrollbar-track-transparent" style={{ height: '480px' }}>
             {messages.length === 0 ? (
               <p className="text-gray-500 font-karla text-sm text-center py-8">
                 Start a conversation with your AI assistant
@@ -177,7 +171,7 @@ export const DraggableAIChat: React.FC<DraggableAIChatProps> = ({
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                    className={`max-w-[80%] rounded-2xl px-3 py-2 ${
                       msg.role === 'user'
                         ? 'bg-gradient-to-b from-[#e8e8e8] to-[#c9c9c9] text-[#2a2727]'
                         : 'bg-[#1a1817] text-white border border-[#3a3736]'
@@ -192,7 +186,7 @@ export const DraggableAIChat: React.FC<DraggableAIChatProps> = ({
           </div>
 
           {/* Input */}
-          <div className="p-4 border-t border-[#3a3736]">
+          <div className="p-2 border-t border-[#3a3736]">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -200,7 +194,7 @@ export const DraggableAIChat: React.FC<DraggableAIChatProps> = ({
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                 placeholder="Ask me anything..."
-                className="flex-1 bg-[#1a1817] rounded-xl px-4 py-2 text-white placeholder:text-gray-500 font-karla text-sm border border-[#0f0e0d] focus:outline-none focus:border-[#2a2827] transition-colors"
+                className="flex-1 bg-[#1a1817] rounded-xl px-3 py-2 text-white placeholder:text-gray-500 font-karla text-sm border border-[#0f0e0d] focus:outline-none focus:border-[#2a2827] transition-colors"
               />
               <button
                 onClick={handleSend}

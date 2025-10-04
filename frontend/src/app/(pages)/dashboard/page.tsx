@@ -129,10 +129,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="h-screen bg-[#181716] overflow-hidden flex flex-col">
-      <div className="w-full px-4 sm:px-8 md:px-12 lg:px-24 py-4 sm:py-6 flex-shrink-0">
+    <div className="h-screen bg-[#181716] overflow-hidden flex flex-col" style={{ maxHeight: '100vh' }}>
+      <div className="w-full px-8 sm:px-16 md:px-24 lg:px-32 py-8 flex-shrink-0" style={{ maxWidth: '1920px', marginLeft: 'auto', marginRight: 'auto' }}>
         {/* Back Button */}
-        <Link href="/home" className="inline-block mb-4 sm:mb-6">
+        <Link href="/home" className="inline-block mb-8">
           <button className="bg-gradient-to-b from-[#2a2727] to-[#1f1d1d] hover:from-[#323030] hover:to-[#252322] transition-all rounded-full px-6 py-3 flex items-center gap-2 shadow-[0_4px_12px_rgba(0,0,0,0.4),0_2px_6px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.05)] border border-[#3a3736] active:scale-95">
             <ArrowLeft className="w-4 h-4 text-white" />
             <span className="text-white font-karla font-medium text-sm">Back</span>
@@ -141,9 +141,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Main Dashboard Container */}
-      <div className="flex-1 px-4 sm:px-8 md:px-12 lg:px-24 pb-4 sm:pb-6 min-h-0">
+      <div className="flex-1 px-8 sm:px-16 md:px-24 lg:px-32 pb-16 min-h-0 w-full" style={{ maxWidth: '1920px', marginLeft: 'auto', marginRight: 'auto' }}>
         <div className="bg-gradient-to-b from-[#2e2b2a] to-[#252322] rounded-3xl h-full shadow-[0_8px_32px_rgba(0,0,0,0.5),0_4px_16px_rgba(0,0,0,0.4),inset_0_2px_0_rgba(255,255,255,0.1)] border border-[#4a4542] overflow-hidden">
-          <div className="h-full flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 p-4 sm:p-6 lg:p-8">
+          <div className="h-full flex flex-col lg:flex-row gap-8 lg:gap-8 p-8">
             {/* Left Sidebar - Portfolio */}
             <div className="w-full lg:w-1/4 lg:min-w-[280px] flex-shrink-0">
               <PortfolioSidebar

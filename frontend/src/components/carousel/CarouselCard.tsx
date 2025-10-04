@@ -27,7 +27,7 @@ export class CarouselCard extends React.PureComponent<CarouselCardProps> {
       <div
         className={`
           bg-gradient-to-b from-[#e8e8e8] to-[#c9c9c9]
-          rounded-2xl w-[227px] h-20 flex-shrink-0
+          rounded-2xl w-[224px] h-[72px] flex-shrink-0
           flex items-center justify-center
           shadow-[0_4px_12px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.5)]
           border border-[#ffffff40]
@@ -44,25 +44,25 @@ export class CarouselCard extends React.PureComponent<CarouselCardProps> {
         {isCryptoMode ? (
           <div className="relative z-10 px-6 flex items-center justify-between w-full">
             {/* Ticker */}
-            <span className="text-[#2a2727] font-karla font-bold text-3xl">
+            <span className="text-[#2a2727] font-karla font-bold text-2xl">
               {ticker}
             </span>
             
             {/* Price and Percent Change - Stacked */}
-            <div className="flex flex-col items-end gap-0.5">
+            <div className="flex flex-col items-end gap-0">
               {/* Price */}
-              <span className="text-[#2a2727] font-karla font-semibold text-xl">
+              <span className="text-[#2a2727] font-karla font-semibold text-lg">
                 {price}
               </span>
               
               {/* Percent Change with Arrow */}
-              <div className={`flex items-center gap-1.5 ${isPositive ? 'text-green-700' : 'text-red-700'}`}>
+              <div className={`flex items-center gap-2 ${isPositive ? 'text-green-700' : 'text-red-700'}`}>
                 {isPositive ? (
-                  <TrendingUp className="w-5 h-5" />
+                  <TrendingUp className="w-4 h-4" />
                 ) : (
-                  <TrendingDown className="w-5 h-5" />
+                  <TrendingDown className="w-4 h-4" />
                 )}
-                <span className="font-karla font-semibold text-lg">
+                <span className="font-karla font-semibold text-base">
                   {Math.abs(percentChange).toFixed(2)}%
                 </span>
               </div>

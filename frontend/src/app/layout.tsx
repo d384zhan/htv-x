@@ -19,7 +19,7 @@ const karla = Karla({
 });
 
 export const metadata: Metadata = {
-  title: "Crypto App",
+  title: "Coinpilot",
   description: "AI embedded crypto tutor/simulator",
 };
 

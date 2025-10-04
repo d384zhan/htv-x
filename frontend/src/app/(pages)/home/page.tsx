@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronUp, ArrowRight } from "lucide-react"
+import { Send, ArrowRight } from "lucide-react"
 import { Carousel } from "@/components/carousel"
 import { useMemo, useState } from "react"
 import Link from "next/link"
@@ -87,47 +87,48 @@ export default function HomePage() {
   }
 
   return (
-    <div className="h-screen bg-[#181716] flex items-center justify-center overflow-hidden">
-      <div className="w-full h-full px-4 sm:px-8 md:px-12 lg:px-24 flex flex-col gap-4 py-8">
+    <div className="h-screen bg-[#181716] flex items-center justify-center overflow-hidden" style={{ maxHeight: '100vh' }}>
+      <div className="w-full h-full px-8 sm:px-16 md:px-24 lg:px-32 flex flex-col gap-6 py-12" style={{ maxWidth: '1920px', marginLeft: 'auto', marginRight: 'auto' }}>
         {/* Title */}
-        <h1 className="text-white text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-center italic flex-shrink-0">Coin Pilot.</h1>
+        <h1 className="text-white text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-center italic flex-shrink-0">Coinpilot</h1>
 
         {/* Carousel Component - Displays crypto prices */}
         <div className="flex-shrink-0">
           <Carousel cards={carouselCards} />
         </div>
 
-        <div className="bg-gradient-to-b from-[#2e2b2a] to-[#252322] rounded-3xl flex-1 flex flex-col shadow-[0_8px_32px_rgba(0,0,0,0.5),0_4px_16px_rgba(0,0,0,0.4),inset_0_2px_0_rgba(255,255,255,0.1)] border border-[#4a4542] p-8 min-h-0">
-          <div className="flex-1 overflow-y-auto mb-4 min-h-0 scrollbar-thin scrollbar-thumb-[#3a3736] scrollbar-track-transparent">
+        <div className="bg-gradient-to-b from-[#2e2b2a] to-[#252322] rounded-3xl flex-1 flex flex-col shadow-[0_8px_32px_rgba(0,0,0,0.5),0_4px_16px_rgba(0,0,0,0.4),inset_0_2px_0_rgba(255,255,255,0.1)] border border-[#4a4542] min-h-0 overflow-hidden">
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-3 min-h-0 scrollbar-thin scrollbar-thumb-[#3a3736] scrollbar-track-transparent">
             {messages.length === 0 && (
-              <div className="text-gray-400 text-center">Start chatting about cryptocurrencies!</div>
+              <div className="text-gray-400 text-center text-sm">Start chatting with assistant about cryptocurrencies!</div>
             )}
             {messages.map((msg, idx) => (
               <div
                 key={idx}
-                className={`mb-2 flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div className="flex flex-col max-w-[80%]">
                   <div
-                    className={`px-4 py-3 rounded-2xl ${
+                    className={`px-3 py-2 rounded-2xl ${
                       msg.role === "user"
                         ? "bg-gradient-to-b from-[#e8e8e8] to-[#c9c9c9] text-[#2a2727] shadow-lg"
-                        : "bg-gradient-to-b from-[#2a2827]/95 to-[#1f1d1d]/95 text-white border border-[#3a3736]"
+                        : "bg-[#1a1817] text-white border border-[#3a3736]"
                     }`}
                   >
-                    <span className="font-karla">{msg.content}</span>
+                    <span className="font-karla text-sm">{msg.content}</span>
                   </div>
                   
                   {/* Show transaction buttons if it's a plan with multiple options */}
                   {msg.isPlan && msg.plans && msg.plans.length > 0 && (
-                    <div className="mt-2 space-y-2">
+                    <div className="mt-3 space-y-3">
                       {msg.plans.map((plan, planIdx) => (
-                        <div key={planIdx} className="flex flex-col gap-1">
+                        <div key={planIdx} className="flex flex-col gap-2">
                           <Link 
                             href={`/transaction?action=${plan.action}&crypto=${plan.crypto}&amount=${plan.amount}`}
                             className="w-full"
                           >
-                            <button className="w-full bg-gradient-to-b from-[#3a5a7a] to-[#2a4a6a] hover:from-[#4a6a8a] hover:to-[#3a5a7a] text-white px-4 py-3 rounded-xl text-sm font-medium font-karla transition-all active:scale-95 shadow-lg text-left">
+                            <button className="w-full bg-gradient-to-b from-[#3a5a7a] to-[#2a4a6a] hover:from-[#4a6a8a] hover:to-[#3a5a7a] text-white px-3 py-2 rounded-xl text-sm font-medium font-karla transition-all active:scale-95 shadow-lg text-left">
                               <div className="flex items-center justify-between">
                                 <div className="flex flex-col">
                                   <span className="font-semibold">
@@ -151,39 +152,41 @@ export default function HomePage() {
               </div>
             ))}
             {loading && (
-              <div className="mb-2 flex justify-start">
-                <div className="px-4 py-3 rounded-2xl bg-gradient-to-b from-[#2a2827]/95 to-[#1f1d1d]/95 text-white border border-[#3a3736] font-karla">Thinking...</div>
+              <div className="flex justify-start">
+                <div className="px-3 py-2 rounded-2xl bg-[#1a1817] text-white border border-[#3a3736] font-karla text-sm">Thinking...</div>
               </div>
             )}
           </div>
 
-          {/* Input box with 32px margin */}
-          <div className="relative flex-shrink-0 mx-[32px] my-[32px]">
-            <input
-              type="text"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type your message..."
-              className="w-full bg-[#1a1817] rounded-2xl px-6 py-6 pr-20 min-h-[80px] text-white placeholder:text-gray-500 font-karla text-lg shadow-[inset_0_2px_8px_rgba(0,0,0,0.5),inset_0_1px_4px_rgba(0,0,0,0.3)] border border-[#0f0e0d] focus:outline-none focus:border-[#2a2827] transition-colors"
-              disabled={loading}
-            />
-            <button
-              className="absolute bottom-4 right-4 bg-gradient-to-b from-[#e8e8e8] to-[#c9c9c9] hover:from-[#f0f0f0] hover:to-[#d9d9d9] transition-all rounded-xl w-12 h-12 flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.5)] border border-[#ffffff40] active:scale-95 disabled:opacity-50"
-              onClick={handleSend}
-              disabled={loading || !input.trim()}
-              aria-label="Send"
-            >
-              <ChevronUp className="w-5 h-5 text-[#181716]" />
-            </button>
+          {/* Input */}
+          <div className="p-2 border-t border-[#3a3736] flex-shrink-0">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type your message..."
+                className="flex-1 bg-[#1a1817] rounded-xl px-3 py-2 text-white placeholder:text-gray-500 font-karla text-sm border border-[#0f0e0d] focus:outline-none focus:border-[#2a2827] transition-colors"
+                disabled={loading}
+              />
+              <button
+                onClick={handleSend}
+                disabled={loading || !input.trim()}
+                className="bg-gradient-to-b from-[#e8e8e8] to-[#c9c9c9] hover:from-[#f0f0f0] hover:to-[#d9d9d9] rounded-xl px-3 py-2 transition-all active:scale-95 disabled:opacity-50"
+                aria-label="Send"
+              >
+                <Send className="w-4 h-4 text-[#2a2727]" />
+              </button>
+            </div>
           </div>
         </div>
 
         <div className="flex-shrink-0 text-center">
           <Link href="/dashboard">
-            <button className="bg-gradient-to-b from-[#2a2727] to-[#1f1d1d] hover:from-[#323030] hover:to-[#252322] transition-all rounded-full px-8 py-4 flex items-center gap-3 shadow-[0_4px_12px_rgba(0,0,0,0.4),0_2px_6px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.05)] border border-[#3a3736] active:scale-95 mx-auto">
-              <span className="text-white font-karla font-medium text-base">Go to Dashboard</span>
-              <ArrowRight className="w-5 h-5 text-white" />
+            <button className="bg-gradient-to-b from-[#2a2727] to-[#1f1d1d] hover:from-[#323030] hover:to-[#252322] transition-all rounded-full px-6 py-2.5 flex items-center gap-2 shadow-[0_4px_12px_rgba(0,0,0,0.4),0_2px_6px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.05)] border border-[#3a3736] active:scale-95 mx-auto">
+              <span className="text-white font-karla font-medium text-sm">Go to Dashboard</span>
+              <ArrowRight className="w-4 h-4 text-white" />
             </button>
           </Link>
         </div>
