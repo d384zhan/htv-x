@@ -1,49 +1,50 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
-import { MessageSquare, Minimize2, X, Send, Maximize2 } from 'lucide-react'
-import { ChatMessage } from '@/types'
+import { MessageSquare, Minimize2, Send, Maximize2 } from 'lucide-react'
+import Link from 'next/link'
 
-interface DraggableAIChatProps {
-  onSendMessage?: (message: string) => void
-  messages?: ChatMessage[]
+interface Plan {
+  action: string
+  crypto: string
+  amount: number
+  reason?: string
+}
+
+interface ChatMessage {
+  id: string
+  role: 'user' | 'bot'
+  content: string
+  isPlan?: boolean
+  plans?: Plan[]
 }
 
 /**
- * Draggable, minimizable AI chat window
- * Remembers position in localStorage
+ * Draggable, minimizable AI chat window with Gemini API integration
  */
-export const DraggableAIChat: React.FC<DraggableAIChatProps> = ({
-  onSendMessage,
-  messages = []
-}) => {
+export const DraggableAIChat: React.FC = () => {
   const [isMinimized, setIsMinimized] = useState(true)
-  const [position, setPosition] = useState({ x: 20, y: 700 }) // Default value, will be updated on client
+  const [position, setPosition] = useState({ x: 20, y: 700 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [inputValue, setInputValue] = useState('')
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [loading, setLoading] = useState(false)
   const chatRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Initialize position on client side - top right corner (no localStorage)
+  // Initialize position on client side - top right corner
   useEffect(() => {
     const getResponsivePadding = () => {
       const width = window.innerWidth
-      if (width >= 1024) return 128 // lg:px-32
-      if (width >= 768) return 96   // md:px-24
-      if (width >= 640) return 64   // sm:px-16
-      return 32                      // px-8
+      if (width >= 1024) return 128
+      if (width >= 768) return 96
+      if (width >= 640) return 64
+      return 32
     }
     const padding = getResponsivePadding()
-    // Position at right edge of content area (same as dashboard container)
     setPosition({ x: window.innerWidth - 200 - padding, y: 32 })
   }, [])
-
-  // No localStorage - removed for consistency
-  // Save position to localStorage - REMOVED
-  useEffect(() => {
-    // Removed localStorage saving for consistency across sessions
-  }, [isMinimized, position])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -66,7 +67,6 @@ export const DraggableAIChat: React.FC<DraggableAIChatProps> = ({
       const newX = e.clientX - dragOffset.x
       const newY = e.clientY - dragOffset.y
       
-      // Keep within viewport bounds
       const maxX = window.innerWidth - (isMinimized ? 200 : 400)
       const maxY = window.innerHeight - (isMinimized ? 60 : 500)
       
@@ -92,11 +92,54 @@ export const DraggableAIChat: React.FC<DraggableAIChatProps> = ({
     }
   }, [isDragging, dragOffset])
 
-  const handleSend = () => {
-    if (inputValue.trim() && onSendMessage) {
-      onSendMessage(inputValue)
-      setInputValue('')
+  const handleSend = async () => {
+    if (!inputValue.trim()) return
+    
+    setLoading(true)
+    
+    // Add user message
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: inputValue
     }
+    setMessages(prev => [...prev, userMessage])
+    
+    const userInput = inputValue
+    setInputValue('')
+
+    try {
+      const res = await fetch("http://localhost:4000/api/gemini", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: userInput }),
+      })
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`)
+      }
+      
+      const data = await res.json()
+      
+      const botMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'bot',
+        content: data.research || data.error || "No response received.",
+        isPlan: data.is_plan || false,
+        plans: data.plans || []
+      }
+      
+      setMessages(prev => [...prev, botMessage])
+    } catch (err) {
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'bot',
+        content: `Error: ${err instanceof Error ? err.message : "Failed to fetch response."}`
+      }
+      setMessages(prev => [...prev, errorMessage])
+    }
+    
+    setLoading(false)
   }
 
   return (
@@ -106,7 +149,7 @@ export const DraggableAIChat: React.FC<DraggableAIChatProps> = ({
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
-        width: isMinimized ? '200px' : '380px',
+        width: isMinimized ? '200px' : '400px',
         cursor: isDragging ? 'grabbing' : 'default'
       }}
     >
@@ -170,17 +213,53 @@ export const DraggableAIChat: React.FC<DraggableAIChatProps> = ({
                   key={msg.id}
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div
-                    className={`max-w-[80%] rounded-2xl px-3 py-2 ${
-                      msg.role === 'user'
-                        ? 'bg-gradient-to-b from-[#e8e8e8] to-[#c9c9c9] text-[#2a2727]'
-                        : 'bg-[#1a1817] text-white border border-[#3a3736]'
-                    }`}
-                  >
-                    <p className="font-karla text-sm">{msg.content}</p>
+                  <div className="flex flex-col max-w-[85%]">
+                    <div
+                      className={`rounded-2xl px-3 py-2 ${
+                        msg.role === 'user'
+                          ? 'bg-gradient-to-b from-[#e8e8e8] to-[#c9c9c9] text-[#2a2727]'
+                          : 'bg-[#1a1817] text-white border border-[#3a3736]'
+                      }`}
+                    >
+                      <p className="font-karla text-sm">{msg.content}</p>
+                    </div>
+                    
+                    {/* Plan buttons */}
+                    {msg.isPlan && msg.plans && msg.plans.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {msg.plans.map((plan, idx) => (
+                          <Link 
+                            key={idx}
+                            href={`/transaction?action=${plan.action}&crypto=${plan.crypto}&amount=${plan.amount}`}
+                          >
+                            <button className="w-full bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="font-semibold">
+                                    {plan.action.charAt(0).toUpperCase() + plan.action.slice(1)} {plan.amount} {plan.crypto}
+                                  </div>
+                                  {plan.reason && (
+                                    <div className="text-[10px] text-green-200 mt-0.5">
+                                      {plan.reason}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </button>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))
+            )}
+            {loading && (
+              <div className="flex justify-start">
+                <div className="bg-[#1a1817] text-white border border-[#3a3736] rounded-2xl px-3 py-2">
+                  <p className="font-karla text-sm">Thinking...</p>
+                </div>
+              </div>
             )}
             <div ref={messagesEndRef} />
           </div>
@@ -192,13 +271,15 @@ export const DraggableAIChat: React.FC<DraggableAIChatProps> = ({
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                onKeyDown={(e) => e.key === 'Enter' && !loading && handleSend()}
                 placeholder="Ask me anything..."
-                className="flex-1 bg-[#1a1817] rounded-xl px-3 py-2 text-white placeholder:text-gray-500 font-karla text-sm border border-[#0f0e0d] focus:outline-none focus:border-[#2a2827] transition-colors"
+                disabled={loading}
+                className="flex-1 bg-[#1a1817] rounded-xl px-3 py-2 text-white placeholder:text-gray-500 font-karla text-sm border border-[#0f0e0d] focus:outline-none focus:border-[#2a2827] transition-colors disabled:opacity-50"
               />
               <button
                 onClick={handleSend}
-                className="bg-gradient-to-b from-[#e8e8e8] to-[#c9c9c9] hover:from-[#f0f0f0] hover:to-[#d9d9d9] rounded-xl px-3 py-2 transition-all active:scale-95"
+                disabled={loading || !inputValue.trim()}
+                className="bg-gradient-to-b from-[#e8e8e8] to-[#c9c9c9] hover:from-[#f0f0f0] hover:to-[#d9d9d9] rounded-xl px-3 py-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4 text-[#2a2727]" />
               </button>
