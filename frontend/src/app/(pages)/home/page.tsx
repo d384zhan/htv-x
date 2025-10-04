@@ -19,7 +19,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#181716] flex items-center justify-center py-12">
       <div className="w-full px-[168px] max-lg:px-12 max-md:px-6 flex flex-col gap-4">
         {/* Title */}
-        <h1 className="text-white text-6xl md:text-7xl lg:text-8xl font-bold text-center">placeholder title.</h1>
+        <h1 className="text-white text-6xl md:text-7xl lg:text-8xl font-bold text-center italic">Coinpilot.</h1>
 
         {/* Carousel Component - Displays crypto prices */}
         <Carousel cards={carouselCards} />
