@@ -19,19 +19,77 @@ type Message = {
   plans?: Plan[]
 }
 
+type CarouselCard = {
+  ticker: string
+  price: string
+  percentChange: number
+}
+
 export default function HomePage() {
-  const carouselCards = useMemo(() => [
+  // State for carousel cards - will be updated with live prices
+  const [carouselCards, setCarouselCards] = useState<CarouselCard[]>([
     { ticker: "BTC", price: "$67,234", percentChange: 2.34 },
     { ticker: "ETH", price: "$3,456", percentChange: -1.23 },
     { ticker: "SOL", price: "$142", percentChange: 5.67 },
     { ticker: "ADA", price: "$0.58", percentChange: 3.45 },
     { ticker: "DOT", price: "$6.89", percentChange: -0.89 },
-  ], [])
+  ])
 
   const [input, setInput] = useState("")
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Fetch live prices from backend every 5 seconds
+  useEffect(() => {
+    const tickers = ["BTC-USD", "ETH-USD", "SOL-USD", "ADA-USD", "DOT-USD"]
+    
+    const fetchPrices = async () => {
+      try {
+        const pricePromises = tickers.map(async (ticker) => {
+          const response = await fetch(
+            `http://localhost:4000/api/historical-prices/${ticker}?granularity=ONE_DAY&days_back=2`
+          )
+          const data = await response.json()
+          
+          if (data.success && data.data?.candles && data.data.candles.length >= 2) {
+            const candles = data.data.candles
+            // Most recent candle is first (index 0), previous is index 1
+            const currentPrice = parseFloat(candles[0].close)
+            const previousPrice = parseFloat(candles[1].close)
+            const percentChange = ((currentPrice - previousPrice) / previousPrice) * 100
+            
+            return {
+              ticker: ticker.split('-')[0], // Get just "BTC" from "BTC-USD"
+              price: `$${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+              percentChange: percentChange
+            }
+          }
+          
+          // Return null if fetch fails
+          return null
+        })
+        
+        const results = await Promise.all(pricePromises)
+        const validResults = results.filter((r): r is CarouselCard => r !== null)
+        
+        if (validResults.length > 0) {
+          setCarouselCards(validResults)
+        }
+      } catch (error) {
+        console.error('Failed to fetch prices:', error)
+      }
+    }
+    
+    // Fetch immediately on mount
+    fetchPrices()
+    
+    // Set up interval to fetch every 5 seconds
+    const intervalId = setInterval(fetchPrices, 5000)
+    
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId)
+  }, [])
 
   // Load messages from sessionStorage on mount
   useEffect(() => {
