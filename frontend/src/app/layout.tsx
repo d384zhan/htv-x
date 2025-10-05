@@ -21,6 +21,9 @@ const karla = Karla({
 export const metadata: Metadata = {
   title: "Coinpilot",
   description: "AI embedded crypto tutor/simulator",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({
