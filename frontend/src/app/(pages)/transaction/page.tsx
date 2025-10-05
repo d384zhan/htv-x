@@ -1,5 +1,7 @@
 "use client"
-
+import { useSearchParams, useRouter } from "next/navigation"
+import { TransactionAnalysis } from "@/types"
+import { executeTransaction } from "../../../../lib/supabase"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect, Suspense } from "react"
@@ -15,21 +17,33 @@ interface TransactionAnalysis {
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH'
 }
 
+
+/**
+ * Supported coins with their current prices
+ * Add more coins here as needed
+ */
 const mockCoins = [
   { id: 'btc', ticker: 'BTC', name: 'Bitcoin', currentPrice: 67234 },
   { id: 'eth', ticker: 'ETH', name: 'Ethereum', currentPrice: 3456 },
   { id: 'sol', ticker: 'SOL', name: 'Solana', currentPrice: 142 },
   { id: 'ada', ticker: 'ADA', name: 'Cardano', currentPrice: 0.62 },
   { id: 'dot', ticker: 'DOT', name: 'Polkadot', currentPrice: 7.89 },
+  { id: 'matic', ticker: 'MATIC', name: 'Polygon', currentPrice: 0.89 },
+  { id: 'avax', ticker: 'AVAX', name: 'Avalanche', currentPrice: 38.5 },
+  { id: 'link', ticker: 'LINK', name: 'Chainlink', currentPrice: 14.2 },
+  { id: 'uni', ticker: 'UNI', name: 'Uniswap', currentPrice: 6.5 },
+  { id: 'atom', ticker: 'ATOM', name: 'Cosmos', currentPrice: 9.8 },
 ]
 
 function TransactionPageContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [coinInput, setCoinInput] = useState<string>('')
   const [transactionType, setTransactionType] = useState<'buy' | 'sell'>('buy')
   const [quantity, setQuantity] = useState<string>('')
   const [analysis, setAnalysis] = useState<TransactionAnalysis | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isExecuting, setIsExecuting] = useState(false)
 
   // Populate form from URL parameters
   useEffect(() => {
@@ -48,11 +62,14 @@ function TransactionPageContent() {
     }
   }, [searchParams])
 
-  // Get current price for the coin input (case-insensitive match)
+  /**
+   * Get current price for any coin ticker
+   * Returns 1.0 as default for unknown coins
+   */
   const getCurrentPrice = (ticker: string): number => {
     if (!ticker) return 0
     const coin = mockCoins.find(c => c.ticker.toLowerCase() === ticker.toLowerCase())
-    return coin ? coin.currentPrice : 0
+    return coin ? coin.currentPrice : 1.0 // Default price for unknown coins
   }
 
   const currentPrice = getCurrentPrice(coinInput)
@@ -86,6 +103,32 @@ function TransactionPageContent() {
         const errorText = await res.text()
         console.error("Error response:", errorText)
         throw new Error(`HTTP error! status: ${res.status}`)
+    // Simulate AI analysis - replace with actual API call
+    setTimeout(() => {
+      const mockAnalysis: TransactionAnalysis = {
+        recommendation: transactionType === 'buy' ? 'BUY' : 'SELL',
+        confidence: 75,
+        summary: transactionType === 'buy' 
+          ? `Based on current market trends, buying ${quantity} ${coinInput.toUpperCase()} shows moderate potential. The coin has demonstrated ${coinInput.toUpperCase() === 'BTC' ? 'strong' : 'steady'} support levels.`
+          : `Selling ${quantity} ${coinInput.toUpperCase()} at current price levels could be strategic if you're taking profits. Consider market volatility before proceeding.`,
+        pros: [
+          transactionType === 'buy' 
+            ? `${coinInput.toUpperCase()} has shown consistent growth patterns`
+            : 'Taking profits at current price levels',
+          `Transaction value of $${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} is within normal range`,
+          'Market liquidity is strong'
+        ],
+        cons: [
+          'Market volatility remains elevated',
+          transactionType === 'buy' 
+            ? 'Price may experience short-term corrections'
+            : 'Potential opportunity cost if price continues upward',
+          'Global economic factors could impact crypto markets'
+        ],
+        marketContext: currentPrice > 0 
+          ? `Current ${coinInput.toUpperCase()} price is $${currentPrice.toLocaleString()}. ${transactionType === 'buy' ? 'Market conditions are favorable for accumulation' : 'Consider timing based on recent market movements'}.`
+          : `Unable to find current price data for ${coinInput.toUpperCase()}. Using default price of $1.00.`,
+        riskLevel: 'MEDIUM'
       }
 
       const data = await res.json()
@@ -118,6 +161,41 @@ function TransactionPageContent() {
     }
     
     setIsAnalyzing(false)
+  }
+
+  /**
+   * Execute the transaction and update the database
+   * Works for any coin ticker - will create new entry if needed
+   */
+  const handleExecuteTransaction = async () => {
+    if (!quantity || parseFloat(quantity) <= 0 || !coinInput.trim()) {
+      alert('Please fill in all fields')
+      return
+    }
+
+    setIsExecuting(true)
+
+    try {
+      // Call our Supabase function to update the portfolio
+      // This will create a new entry if the coin doesn't exist
+      await executeTransaction(
+        coinInput.toUpperCase(),  // Ticker in uppercase
+        parseFloat(quantity),      // Amount to buy/sell
+        transactionType            // 'buy' or 'sell'
+      )
+
+      // Show success message
+      alert(`Successfully ${transactionType === 'buy' ? 'purchased' : 'sold'} ${quantity} ${coinInput.toUpperCase()}!`)
+      
+      // Redirect to dashboard to see updated portfolio
+      router.push('/dashboard')
+      
+    } catch (error) {
+      console.error('Transaction error:', error)
+      alert(`Error: ${error instanceof Error ? error.message : 'Failed to execute transaction'}`)
+    } finally {
+      setIsExecuting(false)
+    }
   }
 
   // Reset analysis when form changes
@@ -224,7 +302,7 @@ function TransactionPageContent() {
             </button>
           </div>
 
-          {/* AI Analysis */}
+          {/* AI Analysis - (rest of the code stays the same) */}
           <div className="bg-gradient-to-b from-[#2e2b2a] to-[#252322] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.5),0_4px_16px_rgba(0,0,0,0.4),inset_0_2px_0_rgba(255,255,255,0.1)] border border-[#4a4542] overflow-hidden flex flex-col">
             <h2 className="text-white text-xl font-bold mb-6 font-karla flex-shrink-0">AI Analysis</h2>
 
@@ -329,9 +407,16 @@ function TransactionPageContent() {
                   </div>
                 </div>
 
-                {/* Execute Button */}
-                <button className="w-full bg-gradient-to-b from-[#2a5a2a] to-[#1f4a1f] hover:from-[#3a6a3a] hover:to-[#2a5a2a] text-white font-karla font-bold py-3 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.1)] border border-[#3a6a3a] transition-all active:scale-95 mt-2">
-                  Execute {transactionType === 'buy' ? 'Purchase' : 'Sale'}
+                {/* Execute Button - Now actually executes the transaction! */}
+                <button 
+                  onClick={handleExecuteTransaction}
+                  disabled={isExecuting}
+                  className="w-full bg-gradient-to-b from-[#2a5a2a] to-[#1f4a1f] hover:from-[#3a6a3a] hover:to-[#2a5a2a] disabled:from-[#2a2727] disabled:to-[#1f1d1d] text-white font-karla font-bold py-3 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.1)] border border-[#3a6a3a] disabled:border-[#3a3736] transition-all active:scale-95 disabled:active:scale-100 mt-2"
+                >
+                  {isExecuting 
+                    ? 'Processing...' 
+                    : `Execute ${transactionType === 'buy' ? 'Purchase' : 'Sale'}`
+                  }
                 </button>
               </div>
             )}

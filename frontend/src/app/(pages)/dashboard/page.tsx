@@ -2,21 +2,64 @@
 
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { PortfolioSidebar } from "@/components/dashboard/PortfolioSidebar"
 import { CoinDetailView } from "@/components/dashboard/CoinDetailView"
 import { DraggableAIChat } from "@/components/dashboard/DraggableAIChat"
-import { PortfolioHolding, CoinDetails, ChatMessage } from "@/types"
+import { PortfolioHolding, CoinDetails } from "@/types"
+import { getPortfolio } from "../../../../lib/supabase"
 
-// Mock data - will be replaced with API calls
-const generateMockPriceHistory = (basePrice: number) => {
+/**
+ * Extended coin database with prices and names
+ * Add more coins here as needed
+ */
+const COIN_DATABASE: Record<string, { name: string; price: number }> = {
+  'BTC': { name: 'Bitcoin', price: 67234 },
+  'ETH': { name: 'Ethereum', price: 3456 },
+  'SOL': { name: 'Solana', price: 142 },
+  'ADA': { name: 'Cardano', price: 0.62 },
+  'DOT': { name: 'Polkadot', price: 7.89 },
+  'MATIC': { name: 'Polygon', price: 0.89 },
+  'AVAX': { name: 'Avalanche', price: 38.5 },
+  'LINK': { name: 'Chainlink', price: 14.2 },
+  'UNI': { name: 'Uniswap', price: 6.5 },
+  'ATOM': { name: 'Cosmos', price: 9.8 },
+}
+
+/**
+ * Get coin information by ticker
+ * If coin not in database, creates a default entry
+ */
+const getCoinInfo = (ticker: string) => {
+  const upperTicker = ticker.toUpperCase()
+  if (COIN_DATABASE[upperTicker]) {
+    return COIN_DATABASE[upperTicker]
+  }
+  // Default values for unknown coins
+  return {
+    name: ticker,
+    price: 1.0 // Default price for unknown coins
+  }
+}
+
+/**
+ * Generate realistic price history for any coin
+ * Creates 90 days of historical price data
+ */
+const generatePriceHistory = (basePrice: number, ticker: string) => {
   const data = []
   const now = Date.now()
   const threeMonthsAgo = now - (90 * 24 * 60 * 60 * 1000)
   
+  // Use ticker as seed for consistent random data
+  const seed = ticker.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  
   for (let i = 0; i < 90; i++) {
     const timestamp = threeMonthsAgo + (i * 24 * 60 * 60 * 1000)
-    const variance = (Math.random() - 0.5) * basePrice * 0.1
+    // Create pseudo-random variance based on ticker and day
+    const pseudoRandom = Math.sin(seed + i) * 0.5 + 0.5
+    const variance = (pseudoRandom - 0.5) * basePrice * 0.15
+    
     data.push({
       timestamp,
       date: new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -26,80 +69,108 @@ const generateMockPriceHistory = (basePrice: number) => {
   return data
 }
 
-const mockHoldings: PortfolioHolding[] = [
-  { 
-    coinId: 'btc', 
-    ticker: 'BTC', 
-    name: 'Bitcoin', 
-    quantity: 0.5, 
-    totalValue: 33617, 
-    averageBuyPrice: 65000 
-  },
-  { 
-    coinId: 'eth', 
-    ticker: 'ETH', 
-    name: 'Ethereum', 
-    quantity: 2.5, 
-    totalValue: 8640, 
-    averageBuyPrice: 3200 
-  },
-  { 
-    coinId: 'sol', 
-    ticker: 'SOL', 
-    name: 'Solana', 
-    quantity: 50, 
-    totalValue: 7100, 
-    averageBuyPrice: 135 
-  },
-]
-
-const mockCoinDetails: Record<string, CoinDetails> = {
-  'btc': {
-    id: 'btc',
-    ticker: 'BTC',
-    name: 'Bitcoin',
-    currentPrice: 67234,
-    priceChange24h: 2.34,
-    marketCap: 1300000000000,
-    volume24h: 35000000000,
-    circulatingSupply: 19500000,
-    maxSupply: 21000000,
-    priceHistory: generateMockPriceHistory(67234)
-  },
-  'eth': {
-    id: 'eth',
-    ticker: 'ETH',
-    name: 'Ethereum',
-    currentPrice: 3456,
-    priceChange24h: -1.23,
-    marketCap: 415000000000,
-    volume24h: 18000000000,
-    circulatingSupply: 120000000,
-    priceHistory: generateMockPriceHistory(3456)
-  },
-  'sol': {
-    id: 'sol',
-    ticker: 'SOL',
-    name: 'Solana',
-    currentPrice: 142,
-    priceChange24h: 5.67,
-    marketCap: 65000000000,
-    volume24h: 2500000000,
-    circulatingSupply: 450000000,
-    priceHistory: generateMockPriceHistory(142)
-  },
+/**
+ * Dynamically create coin details for any ticker
+ * This ensures every coin in your portfolio gets proper data
+ */
+const createCoinDetails = (ticker: string): CoinDetails => {
+  const coinInfo = getCoinInfo(ticker)
+  const upperTicker = ticker.toUpperCase()
+  
+  return {
+    id: ticker.toLowerCase(),
+    ticker: upperTicker,
+    name: coinInfo.name,
+    currentPrice: coinInfo.price,
+    priceChange24h: (Math.random() - 0.5) * 10, // Random % change
+    marketCap: coinInfo.price * 1000000000, // Estimated market cap
+    volume24h: coinInfo.price * 50000000, // Estimated volume
+    circulatingSupply: 1000000000, // Estimated supply
+    maxSupply: upperTicker === 'BTC' ? 21000000 : undefined,
+    priceHistory: generatePriceHistory(coinInfo.price, ticker)
+  }
 }
 
 export default function DashboardPage() {
   const [selectedCoinId, setSelectedCoinId] = useState<string | null>(null)
+  const [holdings, setHoldings] = useState<PortfolioHolding[]>([])
+  const [loading, setLoading] = useState(true)
 
+  /**
+   * Load portfolio data from Supabase when component mounts
+   * This runs once when the page loads
+   */
+  useEffect(() => {
+    loadPortfolio()
+  }, [])
+
+  /**
+   * Fetch portfolio from database and transform it into the format our UI expects
+   * Only includes coins with quantity > 0
+   */
+  const loadPortfolio = async () => {
+    try {
+      setLoading(true)
+      
+      // Get all crypto holdings from Supabase
+      const portfolioData = await getPortfolio()
+      
+      // Transform database data into the format our UI components expect
+      const transformedHoldings: PortfolioHolding[] = portfolioData
+        .filter(item => parseFloat(item.quantity) > 0) // Only show coins you actually own
+        .map(item => {
+          const ticker = item.crypto_ticker
+          const coinInfo = getCoinInfo(ticker)
+          const quantity = parseFloat(item.quantity)
+          
+          return {
+            coinId: ticker.toLowerCase(),
+            ticker: ticker,
+            name: coinInfo.name,
+            quantity: quantity,
+            totalValue: quantity * coinInfo.price,
+            averageBuyPrice: coinInfo.price, // In a real app, you'd track this separately
+          }
+        })
+      
+      setHoldings(transformedHoldings)
+    } catch (error) {
+      console.error('Error loading portfolio:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /**
+   * Calculate total portfolio value
+   * Recalculates whenever holdings change
+   */
   const totalValue = useMemo(() => 
-    mockHoldings.reduce((sum, h) => sum + h.totalValue, 0),
-    []
+    holdings.reduce((sum, h) => sum + h.totalValue, 0),
+    [holdings]
   )
 
-  const selectedHolding = mockHoldings.find(h => h.coinId === selectedCoinId) || null
-  const selectedCoinDetails = selectedCoinId ? mockCoinDetails[selectedCoinId] : null
+  /**
+   * Dynamically generate coin details for the selected coin
+   * This ensures any coin you buy gets a proper detail view with graphs
+   */
+  const selectedCoinDetails = useMemo(() => {
+    if (!selectedCoinId) return null
+    const ticker = selectedCoinId.toUpperCase()
+    return createCoinDetails(ticker)
+  }, [selectedCoinId])
+
+  // Find the currently selected holding
+  const selectedHolding = holdings.find(h => h.coinId === selectedCoinId) || null
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="h-screen bg-[#181716] flex items-center justify-center">
+        <div className="text-white font-karla text-lg">Loading portfolio...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="h-screen bg-[#181716] overflow-hidden flex flex-col" style={{ maxHeight: '100vh' }}>
@@ -120,7 +191,7 @@ export default function DashboardPage() {
             {/* Left Sidebar - Portfolio */}
             <div className="w-full lg:w-1/4 lg:min-w-[280px] flex-shrink-0">
               <PortfolioSidebar
-                holdings={mockHoldings}
+                holdings={holdings}
                 totalValue={totalValue}
                 selectedCoinId={selectedCoinId}
                 onCoinSelect={setSelectedCoinId}
