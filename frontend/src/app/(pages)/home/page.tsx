@@ -4,6 +4,7 @@ import { Send, ArrowRight } from "lucide-react"
 import { Carousel } from "@/components/carousel"
 import { useMemo, useState, useEffect } from "react"
 import Link from "next/link"
+import { getPortfolio, PortfolioEntry } from "@/lib/supabase"
 
 type Plan = {
   action: string
@@ -39,6 +40,30 @@ export default function HomePage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [portfolio, setPortfolio] = useState<any[]>([])
+
+  // Fetch portfolio data on mount and keep it updated
+  useEffect(() => {
+    const fetchPortfolio = async () => {
+      try {
+        const data = await getPortfolio()
+        // Transform portfolio data to include calculated values
+        const portfolioWithValues = data.map((entry: PortfolioEntry) => ({
+          ticker: entry.crypto_ticker,
+          quantity: entry.quantity,
+          totalValue: entry.quantity // Will be multiplied by price on backend if needed
+        }))
+        setPortfolio(portfolioWithValues)
+      } catch (error) {
+        console.error('Failed to fetch portfolio:', error)
+      }
+    }
+    
+    fetchPortfolio()
+    // Refresh portfolio every 30 seconds to keep it in sync
+    const interval = setInterval(fetchPortfolio, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   // Fetch live prices from backend every 5 seconds
   useEffect(() => {
@@ -122,11 +147,14 @@ export default function HomePage() {
 
     try {
       // https://htv-x.onrender.com/api/gemini
-      console.log("Sending request to backend...")
+      console.log("Sending request to backend with portfolio...")
       const res = await fetch("https://htv-x.onrender.com/api/gemini", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: userInput }),
+        body: JSON.stringify({ 
+          prompt: userInput,
+          portfolio: portfolio  // Include portfolio data
+        }),
       })
       
       console.log("Response status:", res.status)

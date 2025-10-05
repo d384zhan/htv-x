@@ -109,7 +109,7 @@ export async function executeTransaction(
     if (action === 'buy') {
       // CHECK: Sufficient cash to purchase
       if (currentCash < totalCost) {
-        throw new Error(`Insufficient cash. You have $${currentCash.toFixed(2)} but need $${totalCost.toFixed(2)}`)
+        throw new Error(`Insufficient cash to complete this purchase`)
       }
 
       // Deduct cash
@@ -123,7 +123,7 @@ export async function executeTransaction(
     } else if (action === 'sell') {
       // CHECK: Sufficient crypto to sell
       if (currentCrypto < quantity) {
-        throw new Error(`Insufficient ${upperTicker}. You have ${currentCrypto} but tried to sell ${quantity}`)
+        throw new Error(`Insufficient ${upperTicker} to complete this sale`)
       }
 
       // Add cash

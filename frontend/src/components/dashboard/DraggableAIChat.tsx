@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { MessageSquare, Minimize2, Send, Maximize2 } from 'lucide-react'
 import Link from 'next/link'
+import { getPortfolio, PortfolioEntry } from '@/lib/supabase'
 
 interface Plan {
   action: string
@@ -30,8 +31,30 @@ export const DraggableAIChat: React.FC = () => {
   const [inputValue, setInputValue] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(false)
+  const [portfolio, setPortfolio] = useState<any[]>([])
   const chatRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Fetch portfolio data on mount and keep it updated
+  useEffect(() => {
+    const fetchPortfolio = async () => {
+      try {
+        const data = await getPortfolio()
+        const portfolioWithValues = data.map((entry: PortfolioEntry) => ({
+          ticker: entry.crypto_ticker,
+          quantity: entry.quantity,
+          totalValue: entry.quantity
+        }))
+        setPortfolio(portfolioWithValues)
+      } catch (error) {
+        console.error('Failed to fetch portfolio:', error)
+      }
+    }
+    
+    fetchPortfolio()
+    const interval = setInterval(fetchPortfolio, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   // Load messages from sessionStorage on mount
   useEffect(() => {
@@ -131,7 +154,10 @@ export const DraggableAIChat: React.FC = () => {
       const res = await fetch("https://htv-x.onrender.com/api/gemini", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: userInput }),
+        body: JSON.stringify({ 
+          prompt: userInput,
+          portfolio: portfolio  // Include portfolio data
+        }),
       })
       
       if (!res.ok) {
