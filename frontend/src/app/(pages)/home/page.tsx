@@ -44,8 +44,10 @@ export default function HomePage() {
     setInput("")
 
     try {
+      // http://localhost:4000/api/gemini
+      // https://htv-x.onrender.com/api/gemini
       console.log("Sending request to backend...")
-      const res = await fetch("https://htv-x.onrender.com/api/gemini", {
+      const res = await fetch("http://localhost:4000/api/gemini", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: userInput }),
