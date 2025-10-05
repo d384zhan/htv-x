@@ -7,7 +7,7 @@ import { PortfolioSidebar } from "@/components/dashboard/PortfolioSidebar"
 import { CoinDetailView } from "@/components/dashboard/CoinDetailView"
 import { DraggableAIChat } from "@/components/dashboard/DraggableAIChat"
 import { PortfolioHolding, CoinDetails } from "@/types"
-import { getPortfolio, getTotalValue, PortfolioEntry } from "@/lib/supabase"
+import { getPortfolio, PortfolioEntry } from "@/lib/supabase"
 
 /**
  * Extended coin database with prices and names
@@ -100,14 +100,57 @@ export default function DashboardPage() {
   // New state for live coin data
   const [selectedCoinDetails, setSelectedCoinDetails] = useState<CoinDetails | null>(null)
   const [isFetchingCoinData, setIsFetchingCoinData] = useState(false)
+  
+  // State to store live prices fetched from backend
+  const [livePrices, setLivePrices] = useState<Record<string, number>>({})
 
   /**
    * Load portfolio data from Supabase when component mounts
-   * This runs once when the page loads
    */
   useEffect(() => {
     loadPortfolio()
   }, [])
+  
+  /**
+   * Recalculate holdings and total value whenever live prices update
+   */
+  useEffect(() => {
+    if (holdings.length > 0 && Object.keys(livePrices).length > 0) {
+      // Update holdings with new prices
+      const updatedHoldings = holdings.map(holding => {
+        if (holding.ticker === 'CASH') {
+          return holding // CASH doesn't change
+        }
+        
+        const currentPrice = livePrices[holding.ticker] || getCoinInfo(holding.ticker).price
+        return {
+          ...holding,
+          totalValue: holding.quantity * currentPrice
+        }
+      })
+      
+      setHoldings(updatedHoldings)
+      
+      // Recalculate total
+      recalculateTotalValue(livePrices)
+    }
+  }, [livePrices])
+  
+  /**
+   * Fetch live prices from backend and refresh portfolio every 30 seconds
+   * This ensures the total value stays accurate without hitting rate limits
+   */
+  useEffect(() => {
+    // Fetch live prices immediately
+    fetchAllLivePrices()
+    
+    // Then refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchAllLivePrices()
+    }, 30000) // 30 seconds
+    
+    return () => clearInterval(interval)
+  }, [holdings])
 
   /**
    * Fetch live coin data from backend when a coin is selected
@@ -119,9 +162,123 @@ export default function DashboardPage() {
       setSelectedCoinDetails(null)
     }
   }, [selectedCoinId])
+  
+  /**
+   * Update the selected coin's price when livePrices changes
+   * Without re-fetching the entire historical data
+   */
+  useEffect(() => {
+    if (selectedCoinDetails && selectedCoinId && selectedCoinId !== 'cash') {
+      const ticker = selectedCoinId.toUpperCase()
+      const newPrice = livePrices[ticker]
+      
+      if (newPrice && newPrice !== selectedCoinDetails.currentPrice) {
+        // Calculate new 24h change based on price history
+        const yesterdayPrice = selectedCoinDetails.priceHistory.length > 1 
+          ? selectedCoinDetails.priceHistory[selectedCoinDetails.priceHistory.length - 2].price
+          : newPrice
+        const priceChange24h = ((newPrice - yesterdayPrice) / yesterdayPrice) * 100
+        
+        // Update only the price-dependent fields
+        setSelectedCoinDetails({
+          ...selectedCoinDetails,
+          currentPrice: newPrice,
+          priceChange24h: priceChange24h,
+          marketCap: newPrice * 1000000000,
+          volume24h: newPrice * 50000000
+        })
+      }
+    }
+  }, [livePrices])
+
+  /**
+   * Fetch live price for a single ticker from backend
+   */
+  const fetchLivePrice = async (ticker: string): Promise<number | null> => {
+    try {
+      const response = await fetch(
+        `https://htv-x.onrender.com/api/historical-prices/${ticker}-USD?granularity=ONE_DAY&days_back=1`
+      )
+
+      if (!response.ok) {
+        console.error(`Failed to fetch price for ${ticker}`)
+        return null
+      }
+
+      const data = await response.json()
+
+      if (data.success && data.data?.candles && data.data.candles.length > 0) {
+        const currentPrice = parseFloat(data.data.candles[0].close)
+        return currentPrice
+      }
+      
+      return null
+    } catch (error) {
+      console.error(`Error fetching price for ${ticker}:`, error)
+      return null
+    }
+  }
+
+  /**
+   * Fetch live prices for all crypto holdings (excludes CASH)
+   * Updates the livePrices state and recalculates total portfolio value
+   */
+  const fetchAllLivePrices = async () => {
+    if (holdings.length === 0) return
+    
+    // Get all unique tickers except CASH
+    const tickers = holdings
+      .map(h => h.ticker)
+      .filter(ticker => ticker !== 'CASH')
+    
+    if (tickers.length === 0) return
+    
+    // Fetch all prices in parallel
+    const pricePromises = tickers.map(async (ticker) => {
+      const price = await fetchLivePrice(ticker)
+      return { ticker, price }
+    })
+    
+    const results = await Promise.all(pricePromises)
+    
+    // Build new price map
+    const newPrices: Record<string, number> = {}
+    results.forEach(({ ticker, price }) => {
+      if (price !== null) {
+        newPrices[ticker] = price
+      } else {
+        // Keep existing price or use placeholder
+        newPrices[ticker] = livePrices[ticker] || getCoinInfo(ticker).price
+      }
+    })
+    
+    setLivePrices(newPrices)
+    
+    // Recalculate total portfolio value with live prices
+    recalculateTotalValue(newPrices)
+  }
+
+  /**
+   * Recalculate total portfolio value using live prices
+   */
+  const recalculateTotalValue = (prices: Record<string, number>) => {
+    let total = 0
+    
+    holdings.forEach(holding => {
+      if (holding.ticker === 'CASH') {
+        total += holding.quantity // CASH is 1:1
+      } else {
+        const price = prices[holding.ticker] || getCoinInfo(holding.ticker).price
+        total += holding.quantity * price
+      }
+    })
+    
+    setTotalPortfolioValue(total)
+  }
 
   /**
    * Fetch current price and historical data for a coin from the backend
+   * Uses live prices from livePrices state for current price display
    */
   const fetchCoinData = async (coinId: string) => {
     setIsFetchingCoinData(true)
@@ -129,15 +286,20 @@ export default function DashboardPage() {
     try {
       const ticker = coinId.toUpperCase()
       
-      // Fetch 90 days of historical price data
+      // Use the live price we already fetched (from livePrices state)
+      const currentPrice = livePrices[ticker] || getCoinInfo(ticker).price
+      
+      // Fetch 90 days of historical price data for the chart
       const response = await fetch(
         `https://htv-x.onrender.com/api/historical-prices/${ticker}-USD?granularity=ONE_DAY&days_back=90`
       )
 
       if (!response.ok) {
         console.error(`Failed to fetch coin data for ${ticker}`)
-        // Fall back to mock data if API fails
-        setSelectedCoinDetails(createCoinDetails(ticker))
+        // Fall back to mock data if API fails, but use live price if available
+        const coinDetails = createCoinDetails(ticker)
+        coinDetails.currentPrice = currentPrice
+        setSelectedCoinDetails(coinDetails)
         return
       }
 
@@ -146,10 +308,7 @@ export default function DashboardPage() {
       if (data.success && data.data?.candles && data.data.candles.length > 0) {
         const candles = data.data.candles
         
-        // Get current price (most recent candle)
-        const currentPrice = parseFloat(candles[0].close)
-        
-        // Calculate 24h price change
+        // Calculate 24h price change using current live price
         const yesterdayPrice = candles.length > 1 ? parseFloat(candles[1].close) : currentPrice
         const priceChange24h = ((currentPrice - yesterdayPrice) / yesterdayPrice) * 100
         
@@ -166,12 +325,12 @@ export default function DashboardPage() {
         // Get coin info
         const coinInfo = getCoinInfo(ticker)
         
-        // Create coin details with live data
+        // Create coin details with live price from state + historical data from API
         const coinDetails: CoinDetails = {
           id: coinId,
           ticker: ticker,
           name: coinInfo.name,
-          currentPrice: currentPrice,
+          currentPrice: currentPrice, // Use live price from livePrices state
           priceChange24h: priceChange24h,
           marketCap: currentPrice * 1000000000, // Estimated
           volume24h: candles[0].volume ? parseFloat(candles[0].volume) : currentPrice * 50000000,
@@ -182,13 +341,19 @@ export default function DashboardPage() {
         
         setSelectedCoinDetails(coinDetails)
       } else {
-        // Fall back to mock data if response is invalid
-        setSelectedCoinDetails(createCoinDetails(ticker))
+        // Fall back to mock data if response is invalid, but use live price
+        const coinDetails = createCoinDetails(ticker)
+        coinDetails.currentPrice = currentPrice
+        setSelectedCoinDetails(coinDetails)
       }
     } catch (error) {
       console.error('Error fetching coin data:', error)
-      // Fall back to mock data on error
-      setSelectedCoinDetails(createCoinDetails(coinId.toUpperCase()))
+      // Fall back to mock data on error, but use live price if available
+      const ticker = coinId.toUpperCase()
+      const currentPrice = livePrices[ticker] || getCoinInfo(ticker).price
+      const coinDetails = createCoinDetails(ticker)
+      coinDetails.currentPrice = currentPrice
+      setSelectedCoinDetails(coinDetails)
     } finally {
       setIsFetchingCoinData(false)
     }
@@ -215,13 +380,16 @@ export default function DashboardPage() {
           const coinInfo = isCash ? { name: 'US Dollar', price: 1 } : getCoinInfo(ticker)
           const quantity = item.quantity
           
+          // Use live price if available, otherwise use placeholder from COIN_DATABASE
+          const currentPrice = isCash ? 1 : (livePrices[ticker] || coinInfo.price)
+          
           return {
             coinId: ticker.toLowerCase(),
             ticker: ticker,
             name: coinInfo.name,
             quantity: quantity,
-            totalValue: quantity * coinInfo.price,
-            averageBuyPrice: coinInfo.price, // In a real app, you'd track this separately
+            totalValue: quantity * currentPrice,
+            averageBuyPrice: currentPrice, // In a real app, you'd track this separately
           }
         })
         .sort((a, b) => {
@@ -233,8 +401,16 @@ export default function DashboardPage() {
       
       setHoldings(transformedHoldings)
       
-      // Also load total value (includes CASH)
-      const total = await getTotalValue()
+      // Calculate total value using live prices
+      let total = 0
+      transformedHoldings.forEach(holding => {
+        if (holding.ticker === 'CASH') {
+          total += holding.quantity
+        } else {
+          const price = livePrices[holding.ticker] || getCoinInfo(holding.ticker).price
+          total += holding.quantity * price
+        }
+      })
       setTotalPortfolioValue(total)
     } catch (error) {
       console.error('Error loading portfolio:', error)

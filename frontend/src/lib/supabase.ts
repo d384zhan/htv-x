@@ -32,8 +32,14 @@ export interface PortfolioEntry {
 }
 
 /**
- * Get current price for a coin (placeholder - returns 1 for now)
- * TODO: Integrate with real-time price API
+ * Get current price for a coin (FALLBACK ONLY)
+ * 
+ * NOTE: This function uses placeholder prices and should only be used as a fallback.
+ * The frontend should fetch live prices from the backend API:
+ * https://htv-x.onrender.com/api/historical-prices/{ticker}-USD
+ * 
+ * This is still used by executeTransaction() for transaction calculations
+ * when the frontend hasn't provided a live price.
  */
 export function getCurrentPrice(ticker: string): number {
   // Placeholder prices - replace with real API later
@@ -221,33 +227,4 @@ export async function getCoinQuantity(ticker: string): Promise<number> {
  */
 export async function getCashBalance(): Promise<number> {
   return getCoinQuantity('CASH')
-}
-
-/**
- * Calculate total portfolio value
- * Sum of (quantity * current_price) for all crypto + cash
- */
-export async function getTotalValue(): Promise<number> {
-  try {
-    const portfolio = await getPortfolio()
-    
-    let total = 0
-    for (const entry of portfolio) {
-      const price = getCurrentPrice(entry.crypto_ticker)
-      total += entry.quantity * price
-    }
-    
-    return total
-  } catch (error) {
-    console.error('Error calculating total value:', error)
-    return 0
-  }
-}
-
-/**
- * Calculate amount owned for a specific coin (quantity * current price)
- */
-export function calculateAmountOwned(quantity: number, ticker: string): number {
-  const price = getCurrentPrice(ticker)
-  return quantity * price
 }

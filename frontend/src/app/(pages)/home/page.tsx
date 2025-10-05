@@ -168,7 +168,7 @@ export default function HomePage() {
     <div className="h-screen bg-[#181716] flex items-center justify-center overflow-hidden" style={{ maxHeight: '100vh' }}>
       <div className="w-full h-full px-8 sm:px-16 md:px-24 lg:px-32 flex flex-col gap-6 py-12" style={{ maxWidth: '1920px', marginLeft: 'auto', marginRight: 'auto' }}>
         {/* Title */}
-        <h1 className="text-white text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-center italic flex-shrink-0">Coinpilot</h1>
+        <h1 className="text-white text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-center italic flex-shrink-0">Coinpilot.</h1>
 
         {/* Carousel Component - Displays crypto prices */}
         <div className="flex-shrink-0">
