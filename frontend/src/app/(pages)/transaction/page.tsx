@@ -7,24 +7,6 @@ import { useSearchParams, useRouter } from "next/navigation"
 import { TransactionAnalysis } from "@/types"
 import { executeTransaction } from "@/lib/supabase"
 
-
-/**
- * Supported coins with their current prices
- * Add more coins here as needed
- */
-const mockCoins = [
-  { id: 'btc', ticker: 'BTC', name: 'Bitcoin', currentPrice: 67234 },
-  { id: 'eth', ticker: 'ETH', name: 'Ethereum', currentPrice: 3456 },
-  { id: 'sol', ticker: 'SOL', name: 'Solana', currentPrice: 142 },
-  { id: 'ada', ticker: 'ADA', name: 'Cardano', currentPrice: 0.62 },
-  { id: 'dot', ticker: 'DOT', name: 'Polkadot', currentPrice: 7.89 },
-  { id: 'matic', ticker: 'MATIC', name: 'Polygon', currentPrice: 0.89 },
-  { id: 'avax', ticker: 'AVAX', name: 'Avalanche', currentPrice: 38.5 },
-  { id: 'link', ticker: 'LINK', name: 'Chainlink', currentPrice: 14.2 },
-  { id: 'uni', ticker: 'UNI', name: 'Uniswap', currentPrice: 6.5 },
-  { id: 'atom', ticker: 'ATOM', name: 'Cosmos', currentPrice: 9.8 },
-]
-
 function TransactionPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -38,6 +20,11 @@ function TransactionPageContent() {
   const [successMessage, setSuccessMessage] = useState('')
   const [showErrorModal, setShowErrorModal] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  
+  // New state for live price fetching
+  const [currentPrice, setCurrentPrice] = useState<number>(0)
+  const [isPriceFetching, setIsPriceFetching] = useState(false)
+  const [priceError, setPriceError] = useState<string | null>(null)
 
   // Populate form from URL parameters
   useEffect(() => {
@@ -57,16 +44,74 @@ function TransactionPageContent() {
   }, [searchParams])
 
   /**
-   * Get current price for any coin ticker
-   * Returns 1.0 as default for unknown coins
+   * Fetch current price from backend for the coin ticker
+   * Gets the latest price from the historical prices endpoint
    */
-  const getCurrentPrice = (ticker: string): number => {
-    if (!ticker) return 0
-    const coin = mockCoins.find(c => c.ticker.toLowerCase() === ticker.toLowerCase())
-    return coin ? coin.currentPrice : 1.0 // Default price for unknown coins
+  const fetchCurrentPrice = async (ticker: string) => {
+    if (!ticker || ticker.trim().length === 0) {
+      setCurrentPrice(0)
+      setPriceError(null)
+      return
+    }
+
+    setIsPriceFetching(true)
+    setPriceError(null)
+
+    try {
+      // Check if ticker already has -USD suffix, if not add it
+      const tickerUpper = ticker.toUpperCase()
+      const formattedTicker = tickerUpper.endsWith('-USD') ? tickerUpper : `${tickerUpper}-USD`
+      
+      // Fetch latest price data (1 day to get current price)
+      const response = await fetch(
+        `http://localhost:4000/api/historical-prices/${formattedTicker}?granularity=ONE_DAY&days_back=1`
+      )
+
+      if (response.status === 400) {
+        // Invalid ticker
+        const data = await response.json()
+        setPriceError(`Invalid coin ticker: ${ticker.toUpperCase()}`)
+        setCurrentPrice(0)
+        return
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch price: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success && data.data?.candles && data.data.candles.length > 0) {
+        // Get the most recent closing price
+        const latestPrice = parseFloat(data.data.candles[0].close)
+        setCurrentPrice(latestPrice)
+        setPriceError(null)
+      } else {
+        setPriceError('Unable to fetch price data')
+        setCurrentPrice(0)
+      }
+    } catch (error) {
+      console.error('Error fetching price:', error)
+      setPriceError('Failed to fetch price')
+      setCurrentPrice(0)
+    } finally {
+      setIsPriceFetching(false)
+    }
   }
 
-  const currentPrice = getCurrentPrice(coinInput)
+  // Fetch price whenever coinInput changes
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (coinInput && coinInput.trim().length > 0) {
+        fetchCurrentPrice(coinInput.trim())
+      } else {
+        setCurrentPrice(0)
+        setPriceError(null)
+      }
+    }, 500) // Debounce for 500ms
+
+    return () => clearTimeout(delayDebounceFn)
+  }, [coinInput])
   const totalValue = quantity && currentPrice ? parseFloat(quantity) * currentPrice : 0
 
   const handleAnalyze = async () => {
@@ -214,6 +259,18 @@ function TransactionPageContent() {
                 placeholder="e.g., BTC, ETH, SOL"
                 className="w-full bg-gradient-to-b from-[#1f1d1d] to-[#181716] text-white font-karla text-base px-4 py-3 rounded-2xl border border-[#3a3736] shadow-[inset_0_2px_8px_rgba(0,0,0,0.3)] focus:outline-none focus:border-[#4a4542] transition-colors placeholder:text-gray-600"
               />
+              {/* Show error message for invalid ticker */}
+              {priceError && (
+                <p className="text-red-400 text-xs font-karla mt-2 flex items-center gap-1">
+                  <span>⚠️</span> {priceError}
+                </p>
+              )}
+              {/* Show loading indicator */}
+              {isPriceFetching && (
+                <p className="text-gray-500 text-xs font-karla mt-2">
+                  Fetching price...
+                </p>
+              )}
             </div>
 
             {/* Buy/Sell Toggle */}
@@ -261,13 +318,19 @@ function TransactionPageContent() {
             <div className="mb-6 p-4 bg-gradient-to-b from-[#1f1d1d] to-[#181716] rounded-2xl border border-[#3a3736]">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-gray-400 text-sm font-karla">Price per {coinInput || 'coin'}</span>
-                <span className="text-white font-karla font-medium">
-                  {currentPrice > 0 ? `$${currentPrice.toLocaleString()}` : 'N/A'}
+                <span className={`font-karla font-medium ${currentPrice > 0 ? 'text-white' : 'text-gray-500'}`}>
+                  {isPriceFetching ? (
+                    'Loading...'
+                  ) : currentPrice > 0 ? (
+                    `$${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  ) : (
+                    'N/A'
+                  )}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-400 text-sm font-karla">Total Value</span>
-                <span className="text-white font-karla font-bold text-base">
+                <span className={`font-karla font-bold text-base ${totalValue > 0 ? 'text-white' : 'text-gray-500'}`}>
                   ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
@@ -276,7 +339,7 @@ function TransactionPageContent() {
             {/* Analyze Button */}
             <button
               onClick={handleAnalyze}
-              disabled={!quantity || parseFloat(quantity) <= 0 || !coinInput.trim() || isAnalyzing}
+              disabled={!quantity || parseFloat(quantity) <= 0 || !coinInput.trim() || isAnalyzing || isPriceFetching || priceError !== null}
               className="w-full bg-gradient-to-b from-[#3a5a7a] to-[#2a4a6a] hover:from-[#4a6a8a] hover:to-[#3a5a7a] disabled:from-[#2a2727] disabled:to-[#1f1d1d] text-white font-karla font-bold py-3 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.1)] border border-[#4a6a8a] disabled:border-[#3a3736] disabled:text-gray-600 transition-all active:scale-95 disabled:active:scale-100">
               {isAnalyzing ? 'Analyzing...' : 'Get AI Analysis'}
             </button>
