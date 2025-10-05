@@ -32,13 +32,14 @@ type CarouselCard = {
 const formatCitations = (text: string) => {
   const parts = text.split(/(\[Source: [^\]]+\])/)
   return parts.map((part, idx) => {
-    if (part.match(/\[Source: [^\]]+\]/)) {
+    const match = part.match(/\[Source: ([^\]]+)\]/)
+    if (match) {
       return (
         <span 
           key={idx} 
-          className="text-blue-300 text-xs font-medium bg-blue-950/30 px-1.5 py-0.5 rounded ml-1 border border-blue-800/40"
+          className="text-blue-300 text-xs font-medium bg-blue-400/20 px-2 py-0.5 rounded-md ml-1.5 inline-block"
         >
-          {part}
+          {match[1]}
         </span>
       )
     }
