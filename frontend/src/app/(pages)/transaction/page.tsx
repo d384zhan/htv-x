@@ -110,7 +110,7 @@ function TransactionPageContent() {
       <div className="flex-1 overflow-hidden px-8 sm:px-16 md:px-24 lg:px-32 pb-16 w-full" style={{ maxWidth: '1920px', marginLeft: 'auto', marginRight: 'auto' }}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full" style={{ maxWidth: '1536px', marginLeft: 'auto', marginRight: 'auto' }}>
           {/* Transaction Form */}
-          <div className="bg-gradient-to-b from-[#2e2b2a] to-[#252322] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.5),0_4px_16px_rgba(0,0,0,0.4),inset_0_2px_0_rgba(255,255,255,0.1)] border border-[#4a4542] overflow-y-auto">
+          <div className="bg-gradient-to-b from-[#2e2b2a] to-[#252322] rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.5),0_4px_16px_rgba(0,0,0,0.4),inset_0_2px_0_rgba(255,255,255,0.1)] border border-[#4a4542] flex flex-col">
             <h2 className="text-white text-xl font-bold mb-6 font-karla">Transaction Details</h2>
 
             {/* Coin Input */}
