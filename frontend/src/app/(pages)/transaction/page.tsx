@@ -1,21 +1,11 @@
 "use client"
-import { useSearchParams, useRouter } from "next/navigation"
-import { TransactionAnalysis } from "@/types"
-import { executeTransaction } from "../../../../lib/supabase"
+
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect, Suspense } from "react"
-import { useSearchParams } from "next/navigation"
-
-interface TransactionAnalysis {
-  recommendation: 'BUY' | 'SELL' | 'HOLD' | 'CAUTION'
-  confidence: number
-  summary: string
-  pros: string[]
-  cons: string[]
-  marketContext: string
-  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH'
-}
+import { useSearchParams, useRouter } from "next/navigation"
+import { TransactionAnalysis } from "@/types"
+import { executeTransaction } from "@/lib/supabase"
 
 
 /**
@@ -44,6 +34,10 @@ function TransactionPageContent() {
   const [analysis, setAnalysis] = useState<TransactionAnalysis | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isExecuting, setIsExecuting] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
 
   // Populate form from URL parameters
   useEffect(() => {
@@ -103,32 +97,6 @@ function TransactionPageContent() {
         const errorText = await res.text()
         console.error("Error response:", errorText)
         throw new Error(`HTTP error! status: ${res.status}`)
-    // Simulate AI analysis - replace with actual API call
-    setTimeout(() => {
-      const mockAnalysis: TransactionAnalysis = {
-        recommendation: transactionType === 'buy' ? 'BUY' : 'SELL',
-        confidence: 75,
-        summary: transactionType === 'buy' 
-          ? `Based on current market trends, buying ${quantity} ${coinInput.toUpperCase()} shows moderate potential. The coin has demonstrated ${coinInput.toUpperCase() === 'BTC' ? 'strong' : 'steady'} support levels.`
-          : `Selling ${quantity} ${coinInput.toUpperCase()} at current price levels could be strategic if you're taking profits. Consider market volatility before proceeding.`,
-        pros: [
-          transactionType === 'buy' 
-            ? `${coinInput.toUpperCase()} has shown consistent growth patterns`
-            : 'Taking profits at current price levels',
-          `Transaction value of $${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} is within normal range`,
-          'Market liquidity is strong'
-        ],
-        cons: [
-          'Market volatility remains elevated',
-          transactionType === 'buy' 
-            ? 'Price may experience short-term corrections'
-            : 'Potential opportunity cost if price continues upward',
-          'Global economic factors could impact crypto markets'
-        ],
-        marketContext: currentPrice > 0 
-          ? `Current ${coinInput.toUpperCase()} price is $${currentPrice.toLocaleString()}. ${transactionType === 'buy' ? 'Market conditions are favorable for accumulation' : 'Consider timing based on recent market movements'}.`
-          : `Unable to find current price data for ${coinInput.toUpperCase()}. Using default price of $1.00.`,
-        riskLevel: 'MEDIUM'
       }
 
       const data = await res.json()
@@ -157,10 +125,11 @@ function TransactionPageContent() {
       }
     } catch (err) {
       console.error("Failed to analyze coin:", err)
-      alert(`Failed to fetch analysis: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      alert(`Failed to fetch analysis: ${errorMessage}`)
+    } finally {
+      setIsAnalyzing(false)
     }
-    
-    setIsAnalyzing(false)
   }
 
   /**
@@ -184,18 +153,29 @@ function TransactionPageContent() {
         transactionType            // 'buy' or 'sell'
       )
 
-      // Show success message
-      alert(`Successfully ${transactionType === 'buy' ? 'purchased' : 'sold'} ${quantity} ${coinInput.toUpperCase()}!`)
-      
-      // Redirect to dashboard to see updated portfolio
-      router.push('/dashboard')
+      // Show success modal instead of alert
+      setSuccessMessage(`Successfully ${transactionType === 'buy' ? 'purchased' : 'sold'} ${quantity} ${coinInput.toUpperCase()}!`)
+      setShowSuccessModal(true)
       
     } catch (error) {
       console.error('Transaction error:', error)
-      alert(`Error: ${error instanceof Error ? error.message : 'Failed to execute transaction'}`)
+      // Show error modal instead of alert
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to execute transaction')
+      setShowErrorModal(true)
     } finally {
       setIsExecuting(false)
     }
+  }
+
+  const handleBuyMore = () => {
+    setShowSuccessModal(false)
+    setCoinInput('')
+    setQuantity('')
+    setAnalysis(null)
+  }
+
+  const handleBackToDashboard = () => {
+    router.push('/dashboard')
   }
 
   // Reset analysis when form changes
@@ -423,6 +403,78 @@ function TransactionPageContent() {
           </div>
         </div>
       </div>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-b from-[#2e2b2a] to-[#252322] rounded-3xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.5),0_4px_16px_rgba(0,0,0,0.4),inset_0_2px_0_rgba(255,255,255,0.1)] border border-[#4a4542] max-w-md w-full animate-in fade-in zoom-in duration-200">
+            {/* Success Icon */}
+            <div className="flex justify-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-b from-[#2a5a2a] to-[#1f4a1f] flex items-center justify-center shadow-lg">
+                <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Success Message */}
+            <h2 className="text-white text-2xl font-bold text-center mb-2 font-karla">
+              Transaction Successful!
+            </h2>
+            <p className="text-gray-300 text-center mb-8 font-karla">
+              {successMessage}
+            </p>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={handleBuyMore}
+                className="flex-1 bg-gradient-to-b from-[#3a5a7a] to-[#2a4a6a] hover:from-[#4a6a8a] hover:to-[#3a5a7a] text-white font-karla font-bold py-3 px-6 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.1)] border border-[#4a6a8a] transition-all active:scale-95"
+              >
+                {transactionType === 'buy' ? 'Buy More' : 'Sell More'}
+              </button>
+              <button
+                onClick={handleBackToDashboard}
+                className="flex-1 bg-gradient-to-b from-[#2a5a2a] to-[#1f4a1f] hover:from-[#3a6a3a] hover:to-[#2a5a2a] text-white font-karla font-bold py-3 px-6 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.1)] border border-[#3a6a3a] transition-all active:scale-95"
+              >
+                Back to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Modal */}
+      {showErrorModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-b from-[#2e2b2a] to-[#252322] rounded-3xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.5),0_4px_16px_rgba(0,0,0,0.4),inset_0_2px_0_rgba(255,255,255,0.1)] border border-[#4a4542] max-w-md w-full animate-in fade-in zoom-in duration-200">
+            {/* Error Icon */}
+            <div className="flex justify-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-b from-[#5a2a2a] to-[#4a1f1f] flex items-center justify-center shadow-lg">
+                <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Error Message */}
+            <h2 className="text-white text-2xl font-bold text-center mb-2 font-karla">
+              Transaction Failed
+            </h2>
+            <p className="text-gray-300 text-center mb-8 font-karla">
+              {errorMessage}
+            </p>
+
+            {/* Action Button */}
+            <button
+              onClick={() => setShowErrorModal(false)}
+              className="w-full bg-gradient-to-b from-[#3a5a7a] to-[#2a4a6a] hover:from-[#4a6a8a] hover:to-[#3a5a7a] text-white font-karla font-bold py-3 px-6 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.1)] border border-[#4a6a8a] transition-all active:scale-95"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -432,7 +484,10 @@ export default function TransactionPage() {
   return (
     <Suspense fallback={
       <div className="h-screen bg-[#181716] flex items-center justify-center">
-        <div className="text-white font-karla">Loading...</div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-[#3a5a7a] border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-white font-karla text-lg">Loading transaction page...</p>
+        </div>
       </div>
     }>
       <TransactionPageContent />

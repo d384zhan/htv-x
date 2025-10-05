@@ -7,7 +7,7 @@ import { PortfolioSidebar } from "@/components/dashboard/PortfolioSidebar"
 import { CoinDetailView } from "@/components/dashboard/CoinDetailView"
 import { DraggableAIChat } from "@/components/dashboard/DraggableAIChat"
 import { PortfolioHolding, CoinDetails } from "@/types"
-import { getPortfolio } from "../../../../lib/supabase"
+import { getPortfolio, getTotalValue, PortfolioEntry } from "@/lib/supabase"
 
 /**
  * Extended coin database with prices and names
@@ -94,6 +94,7 @@ const createCoinDetails = (ticker: string): CoinDetails => {
 export default function DashboardPage() {
   const [selectedCoinId, setSelectedCoinId] = useState<string | null>(null)
   const [holdings, setHoldings] = useState<PortfolioHolding[]>([])
+  const [totalPortfolioValue, setTotalPortfolioValue] = useState(0)
   const [loading, setLoading] = useState(true)
 
   /**
@@ -106,7 +107,7 @@ export default function DashboardPage() {
 
   /**
    * Fetch portfolio from database and transform it into the format our UI expects
-   * Only includes coins with quantity > 0
+   * Includes CASH in the list but it will be non-clickable
    */
   const loadPortfolio = async () => {
     try {
@@ -116,12 +117,14 @@ export default function DashboardPage() {
       const portfolioData = await getPortfolio()
       
       // Transform database data into the format our UI components expect
+      // Include CASH but it will be handled specially in the UI
       const transformedHoldings: PortfolioHolding[] = portfolioData
-        .filter(item => parseFloat(item.quantity) > 0) // Only show coins you actually own
-        .map(item => {
+        .filter((item: PortfolioEntry) => item.quantity > 0) // Only show non-zero balances
+        .map((item: PortfolioEntry) => {
           const ticker = item.crypto_ticker
-          const coinInfo = getCoinInfo(ticker)
-          const quantity = parseFloat(item.quantity)
+          const isCash = ticker === 'CASH'
+          const coinInfo = isCash ? { name: 'US Dollar', price: 1 } : getCoinInfo(ticker)
+          const quantity = item.quantity
           
           return {
             coinId: ticker.toLowerCase(),
@@ -132,23 +135,24 @@ export default function DashboardPage() {
             averageBuyPrice: coinInfo.price, // In a real app, you'd track this separately
           }
         })
+        .sort((a, b) => {
+          // Sort CASH to the top, then alphabetically by ticker
+          if (a.ticker === 'CASH') return -1
+          if (b.ticker === 'CASH') return 1
+          return a.ticker.localeCompare(b.ticker)
+        })
       
       setHoldings(transformedHoldings)
+      
+      // Also load total value (includes CASH)
+      const total = await getTotalValue()
+      setTotalPortfolioValue(total)
     } catch (error) {
       console.error('Error loading portfolio:', error)
     } finally {
       setLoading(false)
     }
   }
-
-  /**
-   * Calculate total portfolio value
-   * Recalculates whenever holdings change
-   */
-  const totalValue = useMemo(() => 
-    holdings.reduce((sum, h) => sum + h.totalValue, 0),
-    [holdings]
-  )
 
   /**
    * Dynamically generate coin details for the selected coin
@@ -167,7 +171,10 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="h-screen bg-[#181716] flex items-center justify-center">
-        <div className="text-white font-karla text-lg">Loading portfolio...</div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-[#3a5a7a] border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-white font-karla text-lg">Loading portfolio...</p>
+        </div>
       </div>
     )
   }
@@ -192,7 +199,7 @@ export default function DashboardPage() {
             <div className="w-full lg:w-1/4 lg:min-w-[280px] flex-shrink-0">
               <PortfolioSidebar
                 holdings={holdings}
-                totalValue={totalValue}
+                totalValue={totalPortfolioValue}
                 selectedCoinId={selectedCoinId}
                 onCoinSelect={setSelectedCoinId}
               />

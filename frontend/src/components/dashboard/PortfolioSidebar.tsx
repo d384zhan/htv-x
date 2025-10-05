@@ -47,14 +47,22 @@ export const PortfolioSidebar: React.FC<PortfolioSidebarProps> = ({
       <div className="flex-1 overflow-y-auto px-1 scrollbar-thin scrollbar-thumb-[#3a3736] scrollbar-track-transparent">
         <div className="space-y-3">
           {holdings.length > 0 ? (
-            holdings.map((holding) => (
-              <PortfolioCoinCard
-                key={holding.coinId}
-                holding={holding}
-                isSelected={selectedCoinId === holding.coinId}
-                onClick={() => onCoinSelect(holding.coinId)}
-              />
-            ))
+            holdings.map((holding) => {
+              const isCash = holding.ticker === 'CASH'
+              return (
+                <PortfolioCoinCard
+                  key={holding.coinId}
+                  holding={holding}
+                  isSelected={!isCash && selectedCoinId === holding.coinId}
+                  onClick={() => {
+                    // Only allow selection of non-CASH coins
+                    if (!isCash) {
+                      onCoinSelect(holding.coinId)
+                    }
+                  }}
+                />
+              )
+            })
           ) : (
             <div className="text-gray-500 font-karla text-center py-8 text-sm">
               No holdings yet

@@ -15,6 +15,11 @@ getMarketData.py
 api_test_results.txt
 market_data_*.json
 
+# Database files - SQLite not used (using Supabase)
+*.db
+*.sqlite
+*.sqlite3
+
 # Python
 __pycache__/
 *.py[cod]
