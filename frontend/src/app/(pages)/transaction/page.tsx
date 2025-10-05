@@ -64,7 +64,7 @@ function TransactionPageContent() {
       
       // Fetch latest price data (1 day to get current price)
       const response = await fetch(
-        `http://localhost:4000/api/historical-prices/${formattedTicker}?granularity=ONE_DAY&days_back=1`
+        `https://htv-x.onrender.com/api/historical-prices/${formattedTicker}?granularity=ONE_DAY&days_back=1`
       )
 
       if (response.status === 400) {

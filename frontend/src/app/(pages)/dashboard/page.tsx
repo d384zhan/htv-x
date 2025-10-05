@@ -131,7 +131,7 @@ export default function DashboardPage() {
       
       // Fetch 90 days of historical price data
       const response = await fetch(
-        `http://localhost:4000/api/historical-prices/${ticker}-USD?granularity=ONE_DAY&days_back=90`
+        `https://htv-x.onrender.com/api/historical-prices/${ticker}-USD?granularity=ONE_DAY&days_back=90`
       )
 
       if (!response.ok) {
