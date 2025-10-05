@@ -2,8 +2,8 @@
 
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
-<<<<<<< HEAD
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 
 interface TransactionAnalysis {
   recommendation: 'BUY' | 'SELL' | 'HOLD' | 'CAUTION'
@@ -14,11 +14,6 @@ interface TransactionAnalysis {
   marketContext: string
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH'
 }
-=======
-import { useState, useEffect, Suspense } from "react"
-import { useSearchParams } from "next/navigation"
-import { TransactionAnalysis } from "@/types"
->>>>>>> 8dcb6cbc42d894a73c7a2c804567950fb7e062d8
 
 const mockCoins = [
   { id: 'btc', ticker: 'BTC', name: 'Bitcoin', currentPrice: 67234 },
@@ -68,10 +63,9 @@ function TransactionPageContent() {
 
     setIsAnalyzing(true)
     
-<<<<<<< HEAD
     try {
       console.log("Sending request:", {
-        crypto: selectedCoin.ticker,
+        crypto: coinInput.toUpperCase(),
         action: transactionType,
         amount: parseFloat(quantity)
       })
@@ -80,7 +74,7 @@ function TransactionPageContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          crypto: selectedCoin.ticker,
+          crypto: coinInput.toUpperCase(),
           action: transactionType,
           amount: parseFloat(quantity)
         }),
@@ -92,34 +86,6 @@ function TransactionPageContent() {
         const errorText = await res.text()
         console.error("Error response:", errorText)
         throw new Error(`HTTP error! status: ${res.status}`)
-=======
-    // Simulate AI analysis - replace with actual API call
-    setTimeout(() => {
-      const mockAnalysis: TransactionAnalysis = {
-        recommendation: transactionType === 'buy' ? 'BUY' : 'SELL',
-        confidence: 75,
-        summary: transactionType === 'buy' 
-          ? `Based on current market trends, buying ${quantity} ${coinInput.toUpperCase()} shows moderate potential. The coin has demonstrated ${coinInput.toUpperCase() === 'BTC' ? 'strong' : 'steady'} support levels.`
-          : `Selling ${quantity} ${coinInput.toUpperCase()} at current price levels could be strategic if you're taking profits. Consider market volatility before proceeding.`,
-        pros: [
-          transactionType === 'buy' 
-            ? `${coinInput.toUpperCase()} has shown consistent growth patterns`
-            : 'Taking profits at current price levels',
-          `Transaction value of $${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} is within normal range`,
-          'Market liquidity is strong'
-        ],
-        cons: [
-          'Market volatility remains elevated',
-          transactionType === 'buy' 
-            ? 'Price may experience short-term corrections'
-            : 'Potential opportunity cost if price continues upward',
-          'Global economic factors could impact crypto markets'
-        ],
-        marketContext: currentPrice > 0 
-          ? `Current ${coinInput.toUpperCase()} price is $${currentPrice.toLocaleString()}. ${transactionType === 'buy' ? 'Market conditions are favorable for accumulation' : 'Consider timing based on recent market movements'}.`
-          : `Unable to find current price data for ${coinInput.toUpperCase()}. Please verify the ticker symbol.`,
-        riskLevel: 'MEDIUM'
->>>>>>> 8dcb6cbc42d894a73c7a2c804567950fb7e062d8
       }
 
       const data = await res.json()
@@ -374,10 +340,8 @@ function TransactionPageContent() {
       </div>
     </div>
   )
-<<<<<<< HEAD
 }
-=======
-}
+
 
 export default function TransactionPage() {
   return (
@@ -390,4 +354,3 @@ export default function TransactionPage() {
     </Suspense>
   )
 }
->>>>>>> 8dcb6cbc42d894a73c7a2c804567950fb7e062d8
