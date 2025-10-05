@@ -91,6 +91,12 @@ def get_historical_prices(ticker):
         response = requests.get(url, headers=headers, params=params)
         
         if response.status_code == 200:
+            # bug fixing
+            # print("-------------------")
+            # print(response.json())
+            # print("-------------------")
+            
+            
             return jsonify({
                 'success': True,
                 'ticker': ticker.upper(),

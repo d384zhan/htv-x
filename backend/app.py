@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os
 from api.gemini import gemini_bp
 from api.gemini_coin_analysis import coin_analysis_bp
-from api import historical_prices_bp
+from api.getData import historical_prices_bp
 
 load_dotenv()
 
