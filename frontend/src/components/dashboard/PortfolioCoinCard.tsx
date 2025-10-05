@@ -20,6 +20,13 @@ export const PortfolioCoinCard: React.FC<PortfolioCoinCardProps> = ({
 }) => {
   const isCash = holding.ticker === 'CASH'
   
+  // Calculate profit/loss
+  const costBasis = holding.quantity * holding.averageBuyPrice
+  const profitLoss = holding.totalValue - costBasis
+  const profitLossPercent = costBasis > 0 ? (profitLoss / costBasis) * 100 : 0
+  const hasProfit = profitLoss > 0
+  const hasLoss = profitLoss < 0
+  
   return (
     <div
       onClick={onClick}
@@ -67,9 +74,17 @@ export const PortfolioCoinCard: React.FC<PortfolioCoinCardProps> = ({
               ${holding.quantity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           ) : (
-            <span className="text-gray-400 font-karla text-xs truncate">
-              {holding.name}
-            </span>
+            <>
+              <span className="text-gray-400 font-karla text-xs truncate">
+                {holding.name}
+              </span>
+              {/* Profit/Loss indicator */}
+              {(hasProfit || hasLoss) && (
+                <span className={`font-karla text-xs font-medium ${hasProfit ? 'text-green-400' : 'text-red-400'}`}>
+                  {hasProfit ? '+' : ''}{profitLossPercent.toFixed(2)}%
+                </span>
+              )}
+            </>
           )}
         </div>
       </div>

@@ -21,6 +21,26 @@ interface ChatMessage {
 }
 
 /**
+ * Format text with citations - converts [Source: X] into styled spans
+ */
+const formatCitations = (text: string) => {
+  const parts = text.split(/(\[Source: [^\]]+\])/)
+  return parts.map((part, idx) => {
+    if (part.match(/\[Source: [^\]]+\]/)) {
+      return (
+        <span 
+          key={idx} 
+          className="text-blue-300 text-xs font-medium bg-blue-950/30 px-1.5 py-0.5 rounded ml-1 border border-blue-800/40"
+        >
+          {part}
+        </span>
+      )
+    }
+    return <span key={idx}>{part}</span>
+  })
+}
+
+/**
  * Draggable, minimizable AI chat window with Gemini API integration
  */
 export const DraggableAIChat: React.FC = () => {
@@ -266,7 +286,7 @@ export const DraggableAIChat: React.FC = () => {
                           : 'bg-[#1a1817] text-white border border-[#3a3736]'
                       }`}
                     >
-                      <p className="font-karla text-sm">{msg.content}</p>
+                      <p className="font-karla text-sm">{formatCitations(msg.content)}</p>
                     </div>
                     
                     {/* Plan buttons */}

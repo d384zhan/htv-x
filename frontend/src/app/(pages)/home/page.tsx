@@ -26,6 +26,26 @@ type CarouselCard = {
   percentChange: number
 }
 
+/**
+ * Format text with citations - converts [Source: X] into styled spans
+ */
+const formatCitations = (text: string) => {
+  const parts = text.split(/(\[Source: [^\]]+\])/)
+  return parts.map((part, idx) => {
+    if (part.match(/\[Source: [^\]]+\]/)) {
+      return (
+        <span 
+          key={idx} 
+          className="text-blue-300 text-xs font-medium bg-blue-950/30 px-1.5 py-0.5 rounded ml-1 border border-blue-800/40"
+        >
+          {part}
+        </span>
+      )
+    }
+    return <span key={idx}>{part}</span>
+  })
+}
+
 export default function HomePage() {
   // State for carousel cards - will be updated with live prices
   const [carouselCards, setCarouselCards] = useState<CarouselCard[]>([
@@ -222,7 +242,7 @@ export default function HomePage() {
                         : "bg-[#1a1817] text-white border border-[#3a3736]"
                     }`}
                   >
-                    <span className="font-karla text-sm">{msg.content}</span>
+                    <span className="font-karla text-sm">{formatCitations(msg.content)}</span>
                   </div>
                   
                   {/* Show transaction buttons if it's a plan with multiple options */}

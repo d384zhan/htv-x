@@ -70,13 +70,13 @@ function TransactionPageContent() {
       if (response.status === 400) {
         // Invalid ticker
         const data = await response.json()
-        setPriceError(`Invalid coin ticker`)
+        setPriceError(`Invalid coin ticker: ${ticker.toUpperCase()}`)
         setCurrentPrice(0)
         return
       }
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch price`)
+        throw new Error(`Failed to fetch price: ${response.status}`)
       }
 
       const data = await response.json()
@@ -141,7 +141,7 @@ function TransactionPageContent() {
       if (!res.ok) {
         const errorText = await res.text()
         console.error("Error response:", errorText)
-        throw new Error(`Failed to fetch analysis`)
+        throw new Error(`HTTP error! status: ${res.status}`)
       }
 
       const data = await res.json()
@@ -166,12 +166,12 @@ function TransactionPageContent() {
         setAnalysis(mappedAnalysis)
       } else {
         console.error("Invalid response structure:", data)
-        throw new Error("Unable to analyze coin")
+        throw new Error("Invalid response structure")
       }
     } catch (err) {
       console.error("Failed to analyze coin:", err)
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-      alert(`Failed to fetch analysis. Please try again.`)
+      alert(`Failed to fetch analysis: ${errorMessage}`)
     } finally {
       setIsAnalyzing(false)
     }
@@ -191,11 +191,12 @@ function TransactionPageContent() {
 
     try {
       // Call our Supabase function to update the portfolio
-      // This will create a new entry if the coin doesn't exist
+      // Pass the current price so purchase_price can be stored
       await executeTransaction(
         coinInput.toUpperCase(),  // Ticker in uppercase
         parseFloat(quantity),      // Amount to buy/sell
-        transactionType            // 'buy' or 'sell'
+        transactionType,           // 'buy' or 'sell'
+        currentPrice               // Current market price
       )
 
       // Show success modal instead of alert

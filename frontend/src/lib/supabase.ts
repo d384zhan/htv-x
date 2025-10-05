@@ -18,6 +18,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
  * - id: integer (primary key)
  * - crypto_ticker: text (crypto ticker e.g., 'BTC', 'ETH', or 'CASH')
  * - quantity: numeric (quantity owned)
+ * - purchase_price: numeric (average purchase price)
  * - created_at: timestamp
  * 
  * Special Entry:
@@ -28,6 +29,7 @@ export interface PortfolioEntry {
   id?: number
   crypto_ticker: string
   quantity: number
+  purchase_price?: number
   created_at?: string
 }
 
@@ -61,23 +63,25 @@ export function getCurrentPrice(ticker: string): number {
 
 /**
  * Execute a crypto transaction (buy or sell)
- * - BUY: Deducts cash, adds crypto
+ * - BUY: Deducts cash, adds crypto, stores purchase price
  * - SELL: Adds cash, deducts crypto
  * 
  * @param ticker - Crypto ticker symbol (e.g., 'BTC', 'ETH')
  * @param quantity - Quantity to buy or sell
  * @param action - 'buy' or 'sell'
+ * @param currentPrice - Current market price (optional, uses fallback if not provided)
  */
 export async function executeTransaction(
   ticker: string,
   quantity: number,
-  action: 'buy' | 'sell'
+  action: 'buy' | 'sell',
+  currentPrice?: number
 ): Promise<void> {
   const upperTicker = ticker.toUpperCase()
   
   try {
-    // Get current price for the ticker
-    const price = getCurrentPrice(upperTicker)
+    // Get current price for the ticker (use provided price or fallback)
+    const price = currentPrice || getCurrentPrice(upperTicker)
     const totalCost = quantity * price
 
     // Get current cash balance
@@ -112,13 +116,19 @@ export async function executeTransaction(
         throw new Error(`Insufficient cash to complete this purchase`)
       }
 
+      // Calculate new average purchase price
+      const existingPurchasePrice = cryptoData?.purchase_price || 0
+      const newTotalQuantity = currentCrypto + quantity
+      const newAveragePurchasePrice = currentCrypto > 0
+        ? ((currentCrypto * existingPurchasePrice) + (quantity * price)) / newTotalQuantity
+        : price
+
       // Deduct cash
       const newCashAmount = currentCash - totalCost
-      await updateOrCreateEntry('CASH', newCashAmount, cashData?.id)
+      await updateOrCreateEntry('CASH', newCashAmount, cashData?.id, undefined)
 
-      // Add crypto
-      const newCryptoAmount = currentCrypto + quantity
-      await updateOrCreateEntry(upperTicker, newCryptoAmount, cryptoData?.id)
+      // Add crypto with purchase price
+      await updateOrCreateEntry(upperTicker, newTotalQuantity, cryptoData?.id, newAveragePurchasePrice)
 
     } else if (action === 'sell') {
       // CHECK: Sufficient crypto to sell
@@ -155,24 +165,35 @@ export async function executeTransaction(
 async function updateOrCreateEntry(
   ticker: string,
   quantity: number,
-  existingId?: number
+  existingId?: number,
+  purchasePrice?: number
 ): Promise<void> {
   if (existingId) {
     // Update existing
+    const updateData: any = { quantity }
+    if (purchasePrice !== undefined) {
+      updateData.purchase_price = purchasePrice
+    }
+    
     const { error } = await supabase
       .from('portfolio')
-      .update({ quantity })
+      .update(updateData)
       .eq('id', existingId)
     
     if (error) throw error
   } else {
     // Create new
+    const insertData: any = {
+      crypto_ticker: ticker,
+      quantity
+    }
+    if (purchasePrice !== undefined) {
+      insertData.purchase_price = purchasePrice
+    }
+    
     const { error } = await supabase
       .from('portfolio')
-      .insert([{
-        crypto_ticker: ticker,
-        quantity
-      }])
+      .insert([insertData])
     
     if (error) throw error
   }

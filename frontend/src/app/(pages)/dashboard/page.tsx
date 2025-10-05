@@ -383,13 +383,16 @@ export default function DashboardPage() {
           // Use live price if available, otherwise use placeholder from COIN_DATABASE
           const currentPrice = isCash ? 1 : (livePrices[ticker] || coinInfo.price)
           
+          // Get purchase price from database (defaults to current price if not available)
+          const purchasePrice = item.purchase_price || currentPrice
+          
           return {
             coinId: ticker.toLowerCase(),
             ticker: ticker,
             name: coinInfo.name,
             quantity: quantity,
             totalValue: quantity * currentPrice,
-            averageBuyPrice: currentPrice, // In a real app, you'd track this separately
+            averageBuyPrice: purchasePrice,
           }
         })
         .sort((a, b) => {
