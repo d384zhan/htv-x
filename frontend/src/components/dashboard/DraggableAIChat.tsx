@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
-import { MessageSquare, Minimize2, Send, Maximize2 } from 'lucide-react'
+import { MessageSquare, Minimize2, Send, Maximize2, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { getPortfolio, PortfolioEntry } from '@/lib/supabase'
 
@@ -271,27 +271,30 @@ export const DraggableAIChat: React.FC = () => {
                     
                     {/* Plan buttons */}
                     {msg.isPlan && msg.plans && msg.plans.length > 0 && (
-                      <div className="mt-2 space-y-1">
+                      <div className="mt-3 space-y-3">
                         {msg.plans.map((plan, idx) => (
-                          <Link 
-                            key={idx}
-                            href={`/transaction?action=${plan.action}&crypto=${plan.crypto}&amount=${plan.amount}`}
-                          >
-                            <button className="w-full bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <div className="font-semibold">
-                                    {plan.action.charAt(0).toUpperCase() + plan.action.slice(1)} {plan.amount} {plan.crypto}
+                          <div key={idx} className="flex flex-col gap-2">
+                            <Link 
+                              href={`/transaction?action=${plan.action}&crypto=${plan.crypto}&amount=${plan.amount}`}
+                              className="w-full"
+                            >
+                              <button className="w-full bg-gradient-to-b from-[#3a5a7a] to-[#2a4a6a] hover:from-[#4a6a8a] hover:to-[#3a5a7a] text-white px-3 py-2 rounded-xl text-sm font-medium font-karla transition-all active:scale-95 shadow-lg text-left">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex flex-col">
+                                    <span className="font-semibold">
+                                      {plan.action.charAt(0).toUpperCase() + plan.action.slice(1)} {plan.amount} {plan.crypto}
+                                    </span>
+                                    {plan.reason && (
+                                      <span className="text-xs text-blue-200 mt-1">
+                                        {plan.reason}
+                                      </span>
+                                    )}
                                   </div>
-                                  {plan.reason && (
-                                    <div className="text-[10px] text-green-200 mt-0.5">
-                                      {plan.reason}
-                                    </div>
-                                  )}
+                                  <ArrowRight className="w-4 h-4 flex-shrink-0 ml-2" />
                                 </div>
-                              </div>
-                            </button>
-                          </Link>
+                              </button>
+                            </Link>
+                          </div>
                         ))}
                       </div>
                     )}
