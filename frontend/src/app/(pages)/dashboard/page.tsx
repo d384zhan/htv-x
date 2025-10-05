@@ -96,6 +96,10 @@ export default function DashboardPage() {
   const [holdings, setHoldings] = useState<PortfolioHolding[]>([])
   const [totalPortfolioValue, setTotalPortfolioValue] = useState(0)
   const [loading, setLoading] = useState(true)
+  
+  // New state for live coin data
+  const [selectedCoinDetails, setSelectedCoinDetails] = useState<CoinDetails | null>(null)
+  const [isFetchingCoinData, setIsFetchingCoinData] = useState(false)
 
   /**
    * Load portfolio data from Supabase when component mounts
@@ -104,6 +108,91 @@ export default function DashboardPage() {
   useEffect(() => {
     loadPortfolio()
   }, [])
+
+  /**
+   * Fetch live coin data from backend when a coin is selected
+   */
+  useEffect(() => {
+    if (selectedCoinId && selectedCoinId !== 'cash') {
+      fetchCoinData(selectedCoinId)
+    } else {
+      setSelectedCoinDetails(null)
+    }
+  }, [selectedCoinId])
+
+  /**
+   * Fetch current price and historical data for a coin from the backend
+   */
+  const fetchCoinData = async (coinId: string) => {
+    setIsFetchingCoinData(true)
+    
+    try {
+      const ticker = coinId.toUpperCase()
+      
+      // Fetch 90 days of historical price data
+      const response = await fetch(
+        `http://localhost:4000/api/historical-prices/${ticker}-USD?granularity=ONE_DAY&days_back=90`
+      )
+
+      if (!response.ok) {
+        console.error(`Failed to fetch coin data for ${ticker}`)
+        // Fall back to mock data if API fails
+        setSelectedCoinDetails(createCoinDetails(ticker))
+        return
+      }
+
+      const data = await response.json()
+
+      if (data.success && data.data?.candles && data.data.candles.length > 0) {
+        const candles = data.data.candles
+        
+        // Get current price (most recent candle)
+        const currentPrice = parseFloat(candles[0].close)
+        
+        // Calculate 24h price change
+        const yesterdayPrice = candles.length > 1 ? parseFloat(candles[1].close) : currentPrice
+        const priceChange24h = ((currentPrice - yesterdayPrice) / yesterdayPrice) * 100
+        
+        // Transform candles into price history format
+        const priceHistory = candles.map((candle: any) => ({
+          timestamp: parseInt(candle.start) * 1000, // Convert to milliseconds
+          date: new Date(parseInt(candle.start) * 1000).toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric' 
+          }),
+          price: parseFloat(candle.close)
+        })).reverse() // Reverse to show oldest to newest
+        
+        // Get coin info
+        const coinInfo = getCoinInfo(ticker)
+        
+        // Create coin details with live data
+        const coinDetails: CoinDetails = {
+          id: coinId,
+          ticker: ticker,
+          name: coinInfo.name,
+          currentPrice: currentPrice,
+          priceChange24h: priceChange24h,
+          marketCap: currentPrice * 1000000000, // Estimated
+          volume24h: candles[0].volume ? parseFloat(candles[0].volume) : currentPrice * 50000000,
+          circulatingSupply: 1000000000, // Estimated
+          maxSupply: ticker === 'BTC' ? 21000000 : undefined,
+          priceHistory: priceHistory
+        }
+        
+        setSelectedCoinDetails(coinDetails)
+      } else {
+        // Fall back to mock data if response is invalid
+        setSelectedCoinDetails(createCoinDetails(ticker))
+      }
+    } catch (error) {
+      console.error('Error fetching coin data:', error)
+      // Fall back to mock data on error
+      setSelectedCoinDetails(createCoinDetails(coinId.toUpperCase()))
+    } finally {
+      setIsFetchingCoinData(false)
+    }
+  }
 
   /**
    * Fetch portfolio from database and transform it into the format our UI expects
@@ -154,16 +243,6 @@ export default function DashboardPage() {
     }
   }
 
-  /**
-   * Dynamically generate coin details for the selected coin
-   * This ensures any coin you buy gets a proper detail view with graphs
-   */
-  const selectedCoinDetails = useMemo(() => {
-    if (!selectedCoinId) return null
-    const ticker = selectedCoinId.toUpperCase()
-    return createCoinDetails(ticker)
-  }, [selectedCoinId])
-
   // Find the currently selected holding
   const selectedHolding = holdings.find(h => h.coinId === selectedCoinId) || null
 
@@ -210,10 +289,19 @@ export default function DashboardPage() {
 
             {/* Right Content - Coin Details */}
             <div className="flex-1 min-h-0">
-              <CoinDetailView
-                coinDetails={selectedCoinDetails}
-                holding={selectedHolding}
-              />
+              {isFetchingCoinData ? (
+                <div className="h-full flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-[#3a5a7a] border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-gray-400 font-karla">Loading coin data...</p>
+                  </div>
+                </div>
+              ) : (
+                <CoinDetailView
+                  coinDetails={selectedCoinDetails}
+                  holding={selectedHolding}
+                />
+              )}
             </div>
           </div>
         </div>
