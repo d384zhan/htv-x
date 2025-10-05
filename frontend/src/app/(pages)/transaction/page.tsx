@@ -2,9 +2,23 @@
 
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
+<<<<<<< HEAD
+import { useState, useEffect } from "react"
+
+interface TransactionAnalysis {
+  recommendation: 'BUY' | 'SELL' | 'HOLD' | 'CAUTION'
+  confidence: number
+  summary: string
+  pros: string[]
+  cons: string[]
+  marketContext: string
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH'
+}
+=======
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { TransactionAnalysis } from "@/types"
+>>>>>>> 8dcb6cbc42d894a73c7a2c804567950fb7e062d8
 
 const mockCoins = [
   { id: 'btc', ticker: 'BTC', name: 'Bitcoin', currentPrice: 67234 },
@@ -54,6 +68,31 @@ function TransactionPageContent() {
 
     setIsAnalyzing(true)
     
+<<<<<<< HEAD
+    try {
+      console.log("Sending request:", {
+        crypto: selectedCoin.ticker,
+        action: transactionType,
+        amount: parseFloat(quantity)
+      })
+
+      const res = await fetch("http://localhost:4000/api/gemini-coin-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          crypto: selectedCoin.ticker,
+          action: transactionType,
+          amount: parseFloat(quantity)
+        }),
+      })
+
+      console.log("Response status:", res.status)
+
+      if (!res.ok) {
+        const errorText = await res.text()
+        console.error("Error response:", errorText)
+        throw new Error(`HTTP error! status: ${res.status}`)
+=======
     // Simulate AI analysis - replace with actual API call
     setTimeout(() => {
       const mockAnalysis: TransactionAnalysis = {
@@ -80,11 +119,39 @@ function TransactionPageContent() {
           ? `Current ${coinInput.toUpperCase()} price is $${currentPrice.toLocaleString()}. ${transactionType === 'buy' ? 'Market conditions are favorable for accumulation' : 'Consider timing based on recent market movements'}.`
           : `Unable to find current price data for ${coinInput.toUpperCase()}. Please verify the ticker symbol.`,
         riskLevel: 'MEDIUM'
+>>>>>>> 8dcb6cbc42d894a73c7a2c804567950fb7e062d8
       }
+
+      const data = await res.json()
+      console.log("Full API response:", data)
       
-      setAnalysis(mockAnalysis)
-      setIsAnalyzing(false)
-    }, 1500)
+      if (data.success && data.analysis) {
+        const apiAnalysis = data.analysis
+        console.log("API Analysis:", apiAnalysis)
+        
+        // Map the API response to our component's expected format
+        const mappedAnalysis: TransactionAnalysis = {
+          recommendation: apiAnalysis.recommendation.decision.toUpperCase().replace('STRONG_', '').replace('_', '') as 'BUY' | 'SELL' | 'HOLD' | 'CAUTION',
+          confidence: apiAnalysis.recommendation.confidence,
+          summary: apiAnalysis.summary,
+          pros: apiAnalysis.pros,
+          cons: apiAnalysis.cons,
+          marketContext: `${apiAnalysis.market_context.current_trend} trend with ${apiAnalysis.market_context.volatility} volatility. ${apiAnalysis.market_context.market_sentiment}`,
+          riskLevel: apiAnalysis.recommendation.risk_level.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH'
+        }
+        
+        console.log("Mapped analysis:", mappedAnalysis)
+        setAnalysis(mappedAnalysis)
+      } else {
+        console.error("Invalid response structure:", data)
+        throw new Error("Invalid response structure")
+      }
+    } catch (err) {
+      console.error("Failed to analyze coin:", err)
+      alert(`Failed to fetch analysis: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
+    
+    setIsAnalyzing(false)
   }
 
   // Reset analysis when form changes
@@ -307,6 +374,9 @@ function TransactionPageContent() {
       </div>
     </div>
   )
+<<<<<<< HEAD
+}
+=======
 }
 
 export default function TransactionPage() {
@@ -320,3 +390,4 @@ export default function TransactionPage() {
     </Suspense>
   )
 }
+>>>>>>> 8dcb6cbc42d894a73c7a2c804567950fb7e062d8
