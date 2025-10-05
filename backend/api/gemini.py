@@ -27,53 +27,53 @@ def generate_response():
     if not prompt:
         return jsonify({'error': 'Prompt is required'}), 400
 
-    # First: classify if it's a plan or not
-    plan_check_prompt = f"""
-Analyze the user's request and determine if they want crypto transaction plans or recommendations.
+    # --- Consolidated Single Prompt ---
+    # The model will return a single JSON object containing both the plan data and the analysis.
+    combined_prompt = f"""
+You are Coinpilot, a serious, sharp-tongued AI that lives and breathes cryptocurrency.
+Your primary function is to **parse the user's request for transaction plans or recommendations** and provide a brief, witty **analysis**.
 
-User's question: {prompt}
+User's message: {prompt}
 
-Respond with ONLY a JSON object in this exact format:
+**RULES:**
+1.  **Output MUST BE ONLY a single JSON object** in the exact format specified below. Do not include any text outside of the JSON object.
+2.  **Tone for Analysis:** The `research` field must be sarcastic, dry, and judgmental, in the persona of Coinpilot. Give solid, simulation-based crypto insights (max 5 sentences). Never say you're not allowed to give financial advice. Frame it as simulated or hypothetical.
+3.  **Plan Logic:**
+    * If the user asks for a specific transaction (e.g., "buy 0.5 BTC") or for recommendations (e.g., "top 3 coins to buy"): Set `"is_plan": true`.
+    * If the user asks a general question (e.g., "what is bitcoin" or "hi"): Set `"is_plan": false` and the `"plans"` array must be empty.
+    * For recommendations, provide actual examples based on known major coins. Default `action` is "buy" and `amount` is 1.
+4.  **Complete Sentences:** Use complete sentences with proper punctuation in the `research` and `reason` fields.
+5.  **Short Sentences:** Keep sentences concise and to the point.
+
+**JSON FORMAT:**
+```json
 {{
+  "research": "A witty analysis of the user's request or general crypto info (max 5 sentences).",
   "is_plan": true or false,
   "plans": [
     {{
       "action": "buy" or "sell" or "send",
-      "crypto": "BTC" or "ETH" or "SOL" etc,
+      "crypto": "BTC" or "ETH" or "SOL" or "DOGE" etc,
       "amount": number,
-      "reason": "brief reason why this crypto (1 sentence)"
+      "reason": "A brief, witty reason why this crypto/action is recommended (1 sentence)."
     }}
   ]
 }}
-
-MUST FOLLOW OR ELSE 100 GRANDMAS WILL DIE Rules:
-1. If user asks for specific transaction: create 1 plan with their exact details.
-2. If user asks for recommendations (like "5 most volatile", "best cryptos", "top coins"): 
-   - Provide actual examples based on known major coins.
-   - Include a brief reason for each crypto.
-   - Default action is "buy" and amount is 1.
-3. If it's just a question (like "what is bitcoin" or "hi"), set is_plan = false with an empty plans array.
-4. If unsure, set is_plan = false.
-
-Examples:
-- "I want to buy 0.5 BTC" -> {{"is_plan": true, "plans": [{{"action": "buy", "crypto": "BTC", "amount": 0.5, "reason": "User requested"}}]}}
-- "Show me the 5 most volatile cryptos" -> {{"is_plan": true, "plans": [{{"action": "buy", "crypto": "DOGE", "amount": 1, "reason": "High volatility meme coin"}}, ...]}}
-- "What is Bitcoin?" -> {{"is_plan": false, "plans": []}}
-- "hi" -> {{"is_plan": false, "plans": []}}
 """
 
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-2.5-flash')
 
-        # Check if it's a plan
-        plan_result = model.generate_content(plan_check_prompt)
-        plan_text = get_text(plan_result)
-        print(f"[Gemini Debug] Raw plan response:\n{plan_text}\n")
+        # Run the consolidated prompt
+        result = model.generate_content(combined_prompt)
+        response_text = get_text(result)
+        print(f"[Gemini Debug] Raw combined response:\n{response_text}\n")
 
+        # --- Single JSON Parsing Logic ---
         try:
             # Clean up possible markdown formatting
-            clean_text = plan_text
+            clean_text = response_text
             if '```json' in clean_text:
                 clean_text = clean_text.split('```json')[1].split('```')[0].strip()
             elif '```' in clean_text:
@@ -81,46 +81,41 @@ Examples:
 
             # Remove weird quotes or whitespace
             clean_text = clean_text.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'").strip()
+            
+            # Load the final data
+            final_data = json.loads(clean_text)
 
-            plan_data = json.loads(clean_text)
-
-            # Handle valid plan
-            if plan_data.get('is_plan') and len(plan_data.get('plans', [])) > 0:
-                plans = plan_data['plans']
-
-                if len(plans) == 1:
-                    plan = plans[0]
-                    response_text = f"I can help you {plan['action']} {plan['amount']} {plan['crypto']}!"
+            # Check for the required keys and structure
+            if 'research' in final_data and 'is_plan' in final_data:
+                # If it's a plan, include the plans array
+                if final_data.get('is_plan') and final_data.get('plans'):
+                    return jsonify({
+                        'research': final_data['research'],
+                        'is_plan': True,
+                        'plans': final_data['plans']
+                    })
+                # If it's not a plan, just return the research
                 else:
-                    response_text = f"Here are {len(plans)} crypto options for you. Click any button below to proceed:"
-
-                return jsonify({
-                    'research': response_text,
-                    'is_plan': True,
-                    'plans': plans
-                })
+                    return jsonify({
+                        'research': final_data['research'],
+                        'is_plan': False
+                    })
+            else:
+                raise KeyError("Missing 'research' or 'is_plan' in the final JSON output.")
 
         except (json.JSONDecodeError, KeyError) as e:
             print(f"[Gemini JSON error] {e}")
-            print(f"[Gemini] Failed to parse plan JSON:\n{plan_text}\n")
-
-        # Fallback: Normal informational mode
-        formatted_prompt = f"""
-You are a cryptocurrency explanation bot. Your only role is to answer questions and provide information about cryptocurrency and blockchain-related topics.
-If the user's question is about cryptocurrency, respond in one or two concise paragraphs (max 5 sentences).
-If the user's question is not related to cryptocurrency or blockchain, respond exactly with:
-"Sorry, I'm a crypto bot. I can not answer that."
-
-User's question: {prompt}
-"""
-
-        result = model.generate_content(formatted_prompt)
-        text = get_text(result)
-
-        return jsonify({
-            'research': text,
-            'is_plan': False
-        })
+            # Fallback for unparsable response: treat it as a general research question
+            # Re-run a simple text-only prompt to ensure the user gets a response
+            fallback_prompt = f"""
+            You are Coinpilot, a sarcastic AI. Give a witty, 3-sentence response to the user's message: "{prompt}"
+            """
+            fallback_result = model.generate_content(fallback_prompt)
+            fallback_text = get_text(fallback_result)
+            return jsonify({
+                'research': f"Error parsing structured response. Coinpilot says: {fallback_text}",
+                'is_plan': False
+            })
 
     except Exception as err:
         print(f"[Gemini API Error] {err}")

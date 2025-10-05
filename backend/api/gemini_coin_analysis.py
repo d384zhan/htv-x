@@ -42,7 +42,7 @@ def analyze_coin():
       ],
       "recommendation": {{
         "decision": "buy/sell/hold",
-        "confidence": 75,
+        "confidence": 0-100,
         "risk_level": "low/medium/high"
       }}
     }}
