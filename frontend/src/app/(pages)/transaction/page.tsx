@@ -70,7 +70,7 @@ function TransactionPageContent() {
         amount: parseFloat(quantity)
       })
 
-      const res = await fetch("http://localhost:4000/api/gemini-coin-analysis", {
+      const res = await fetch("https://htv-x.onrender.com/api/gemini-coin-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
