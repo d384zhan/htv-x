@@ -2,7 +2,7 @@
 
 import { Send, ArrowRight } from "lucide-react"
 import { Carousel } from "@/components/carousel"
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import Link from "next/link"
 
 type Plan = {
@@ -32,6 +32,25 @@ export default function HomePage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Load messages from sessionStorage on mount
+  useEffect(() => {
+    const savedMessages = sessionStorage.getItem('home-chat-messages')
+    if (savedMessages) {
+      try {
+        setMessages(JSON.parse(savedMessages))
+      } catch (e) {
+        console.error('Failed to parse saved messages:', e)
+      }
+    }
+  }, [])
+
+  // Save messages to sessionStorage whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      sessionStorage.setItem('home-chat-messages', JSON.stringify(messages))
+    }
+  }, [messages])
 
   const handleSend = async () => {
     if (!input.trim()) return
